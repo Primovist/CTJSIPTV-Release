@@ -1,12 +1,20 @@
 # CTJSIPTV Release
 
+## CTJSIPTV 1.0.0
+
+当前正式版本确定为 **1.0.0**。这是首个稳定版本，完成江苏电信 IPTV 动态认证与 Portal、直播/回看、EPG/XMLTV、VOD、Xtream Codes、TVBox/MacCMS、内置 Web UI 以及直播源管理等主要能力。
+
+Portal 地址由运营商认证链最终的 `loadbalanced` 响应动态取得，IP 与端口均不固定；程序不依赖固定 Portal IP、固定 `33200` 端口或 DNS fallback。
+
+> 1.0.0 的 Release 二进制将在后续构建额度恢复后创建；在对应 Release 出现前，请不要把旧的 beta 二进制视为 1.0.0。
+
 江苏电信 IPTV 服务端公开发行仓库。本仓库只面向最终用户，提供编译后的发行版、部署方法、配置说明和客户端接入方法。服务端源码、上游协议分析和开发实现文档保存在私有开发仓库。
 
 > 使用前提：运行 CTJSIPTV 的设备需要能够访问已经融合到本地网络的江苏电信 IPTV 专网。本项目不负责光猫、路由器或运营商侧的 IPTV 接入与业务订购。
 
 ## 下载
 
-请从 Releases 下载最新正式版：
+1.0.0 Release 创建后，请从 Releases 下载对应平台的正式版：
 
 | 文件 | 平台 |
 |---|---|
@@ -81,6 +89,9 @@ curl http://127.0.0.1:8765/api/status
 | `XTREAM_USERNAME` | 否 | Xtream 用户名 |
 | `XTREAM_PASSWORD` | 否 | Xtream 密码 |
 | `XTREAM_PUBLIC_URL` | 否 | Xtream 对外访问基址 |
+| `PUBLIC_URL` | 否 | 推荐的统一公开根地址（反向代理/域名部署） |
+| `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录 |
+| `VOD_TITLE_CLEAN_RULES` | 否 | VOD 标题清理规则文件 |
 | `TVBOX_PUBLIC_URL` | 否 | TVBox 对外访问基址 |
 
 `RTP2HTTPD` 示例：
@@ -303,7 +314,7 @@ TVBOX_PUBLIC_URL=https://iptv.example.com
 https://iptv.example.com/tvbox.json
 ```
 
-`TVBOX_PUBLIC_URL` 未设置时会依次使用 `XTREAM_PUBLIC_URL` 和监听地址作为生成地址的依据。
+推荐统一配置 `PUBLIC_URL`。`TVBOX_PUBLIC_URL` 可单独覆盖 TVBox 生成地址；未设置时还可使用 `XTREAM_PUBLIC_URL` 或监听地址。
 
 生成的 TVBox 站源核心结构为：
 
@@ -379,7 +390,7 @@ vod_play_url
 
 按需解析真正的上游播放地址，因此读取剧集详情时不会预先解析所有分集的临时播放 URL。
 
-> TVBox 支持目前位于开发临时分支，在正式 Release 合并并发布对应版本前，以正式 Release 中的实际功能为准。
+> TVBox / MacCMS 已纳入 1.0.0 功能范围；实际可用版本以 Releases 中发布的二进制为准。
 
 ## 更新
 
