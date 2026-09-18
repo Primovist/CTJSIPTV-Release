@@ -1,0 +1,61 @@
+# CTJSIPTV 1.0.0 配置示例
+# 复制为 ctjsiptv.conf 后填写。不要提交包含真实账号或密码的配置文件。
+
+# ===== IPTV 认证：必填 =====
+IPTV_USER_ID=
+IPTV_PASSWORD=
+IPTV_STB_ID=
+
+# ===== IPTV 网络身份 =====
+# 多网卡、VPN、Surge 等环境建议明确指定 IPTV 业务网卡。
+NIC=en0
+# 留空时从 NIC 自动读取。
+IPTV_MAC=
+IPTV_IP=
+
+# ===== 可选机顶盒认证字段 =====
+IPTV_STB_INFO=
+IPTV_PRMID=
+IPTV_DRM_SUPPLIER=
+# 通常无需填写；认证后会尝试动态获取。
+IPTV_API_KEY=
+IPTV_SECRET_KEY=
+
+# ===== HTTP 服务 =====
+# 默认 IPv4/IPv6 双栈监听 8765。
+LISTEN=[::]:8765
+# 旧式仅指定端口方式；设置 LISTEN 后无需设置。
+# PORT=8765
+
+# 反向代理/域名访问时推荐设置统一公开根地址。
+# 示例：https://iptv.example.com:444
+PUBLIC_URL=
+
+# ===== 直播 =====
+# rtp2httpd 的 HTTP/HTTPS 根地址。
+# 示例：https://rtp2httpd.example.com:444
+RTP2HTTPD=
+
+# 可选本地 PNG Logo 目录。
+LIVE_LOGO_DIR=
+
+# 留空默认使用 ctjsiptv.conf 同目录的 live-overrides.json。
+# 相对路径以配置文件所在目录为基准。
+# JSON: {"disabled":[],"order":[],"custom":[]}
+LIVE_OVERRIDES=
+
+# ===== VOD =====
+# 留空默认使用 ctjsiptv.conf 同目录的 vod-title-clean.json。
+# JSON: {"literal":[],"suffix":[],"regex":[]}
+VOD_TITLE_CLEAN_RULES=
+
+# ===== Xtream Codes =====
+XTREAM_ENABLED=false
+XTREAM_USERNAME=
+XTREAM_PASSWORD=
+# 可单独覆盖 Xtream 公开根地址；通常使用 PUBLIC_URL 即可。
+XTREAM_PUBLIC_URL=
+
+# ===== TVBox / MacCMS =====
+# 可单独覆盖 TVBox 公开根地址；通常使用 PUBLIC_URL 即可。
+TVBOX_PUBLIC_URL=
