@@ -2,8 +2,7 @@
 
 ## 1. 功能
 
-- 江苏电信 IPTV 动态认证：`auth → uploadAuthInfo → getServiceList → UserGroupNMB → loadbalanced → Portal`
-- 动态获取 Portal，不依赖固定 Portal IP、固定 33200 端口或 DNS fallback
+- 江苏电信 IPTV 动态认证，动态获取 Portal
 - 直播、回看、EPG/XMLTV
 - 电影、剧集、短剧、动漫、少儿、综艺、电竞等 VOD
 - 内置单文件 Web UI，无需额外部署前端
@@ -12,7 +11,22 @@
 - 直播源启停、排序、自定义源与本地频道 Logo
 - VOD 标题清理
 
-## 2. 下载与启动
+## 2. 运行环境
+
+运行 CTJSIPTV 的设备必须能够访问江苏电信 IPTV 专网资源。适用环境包括：
+
+- 江苏电信官方软终端能够正常运行、可直接访问 IPTV 专网的网络环境；
+- 由路由器模拟 IPTV 认证并获取 IPTV 专网 IP，再将该网络提供给 CTJSIPTV 主机的环境。
+
+如果主机存在多个网卡、VPN、虚拟接口，或者 IPTV 专网由路由器通过指定接口提供，建议在配置中明确设置 `NIC`，例如：
+
+```ini
+NIC=en0
+```
+
+CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指定网卡能够访问运营商 IPTV 专网资源。
+
+## 3. 下载与启动
 
 正式版本统一从 `CTJSIPTV-Release` 的 **Latest Release** 下载：
 
@@ -81,7 +95,120 @@ http://设备IP:8765/
 
 内置 Web UI 已由 Release 构建过程嵌入二进制，因此普通用户**不需要 Apache/Nginx，也不需要单独部署 index.html**。
 
-## 3. 主要配置
+## 4. 后台服务
+
+### macOS：launchctl
+
+以下示例假设程序安装在 `/usr/local/ctjsiptv`：
+
+```sh
+sudo mkdir -p /usr/local/ctjsiptv
+sudo cp ctjsiptv ctjsiptv.conf /usr/local/ctjsiptv/
+sudo chmod +x /usr/local/ctjsiptv/ctjsiptv
+```
+
+创建 `~/Library/LaunchAgents/com.ctjsiptv.server.plist`：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ctjsiptv.server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/ctjsiptv/ctjsiptv</string>
+        <string>-c</string>
+        <string>/usr/local/ctjsiptv/ctjsiptv.conf</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/ctjsiptv.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/ctjsiptv-error.log</string>
+</dict>
+</plist>
+```
+
+加载：
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ctjsiptv.server.plist
+```
+
+停止并卸载：
+
+```sh
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ctjsiptv.server.plist
+```
+
+修改配置或替换二进制后可重新启动：
+
+```sh
+launchctl kickstart -k gui/$(id -u)/com.ctjsiptv.server
+```
+
+### Linux：systemd
+
+以下示例同样使用 `/usr/local/ctjsiptv`：
+
+```sh
+sudo mkdir -p /usr/local/ctjsiptv
+sudo cp ctjsiptv ctjsiptv.conf /usr/local/ctjsiptv/
+sudo chmod +x /usr/local/ctjsiptv/ctjsiptv
+```
+
+创建 `/etc/systemd/system/ctjsiptv.service`：
+
+```ini
+[Unit]
+Description=CTJSIPTV
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/local/ctjsiptv
+ExecStart=/usr/local/ctjsiptv/ctjsiptv -c /usr/local/ctjsiptv/ctjsiptv.conf
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启用并立即启动：
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now ctjsiptv
+```
+
+查看状态和日志：
+
+```sh
+systemctl status ctjsiptv
+journalctl -u ctjsiptv -f
+```
+
+重启或停止：
+
+```sh
+sudo systemctl restart ctjsiptv
+sudo systemctl stop ctjsiptv
+```
+
+
+## 5. 主要配置
 
 完整配置和注释见 `ctjsiptv.conf.example`。
 
@@ -110,7 +237,7 @@ http://设备IP:8765/
 PUBLIC_URL=https://iptv.example.com
 ```
 
-## 4. rtp2httpd
+## 6. rtp2httpd
 
 客户端不能直接访问 IPTV 业务网，或需要将直播/回看统一经外部入口输出时：
 
@@ -120,7 +247,7 @@ RTP2HTTPD=https://rtp2httpd.example.com:444
 
 rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。未配置时保留上游原始播放地址。
 
-## 5. 内置 Web UI
+## 7. 内置 Web UI
 
 访问 `http://设备IP:8765/` 即可使用。网页提供影视分类、搜索、详情、分集、播放、直播、EPG、运行状态、直播源管理及 VOD 标题规则管理。
 
@@ -146,7 +273,7 @@ VOD 标题规则结构：
 }
 ```
 
-## 6. Xtream Codes
+## 8. Xtream Codes
 
 ```ini
 XTREAM_ENABLED=true
@@ -165,7 +292,7 @@ Password: change-me
 
 主要兼容 `/player_api.php`、`/xmltv.php`、直播/VOD/Series、EPG 与 timeshift。Xtream 凭据仅用于 CTJSIPTV 客户端鉴权，不要复用运营商 IPTV 密码。
 
-## 7. TVBox / MacCMS
+## 9. TVBox / MacCMS
 
 TVBox 推荐直接使用：
 
@@ -181,7 +308,7 @@ MacCMS type=1 API：
 
 使用域名或反向代理时优先配置 `PUBLIC_URL`；如需单独覆盖 TVBox 地址再使用 `TVBOX_PUBLIC_URL`。
 
-## 8. 原生 API
+## 10. 原生 API
 
 主要入口：
 
@@ -204,7 +331,7 @@ GET /api/epg?days=7
 
 EPG 输出 XMLTV，直播列表输出扩展 M3U。
 
-## 9. 内网与公网访问
+## 11. 内网与公网访问
 
 CTJSIPTV 自带 HTTP 服务和 Web UI，因此内网无需额外 Web Server：
 
@@ -220,7 +347,7 @@ PUBLIC_URL=https://iptv.example.com
 
 反向代理应保留原始 URI；部分 VOD ID 可能包含 `%2F` 等编码字符。公网入口应自行增加身份验证、VPN、IP 白名单或可信网关。不要直接裸露 IPTV 凭据或临时播放鉴权信息。
 
-## 10. 更新
+## 12. 更新
 
 停止旧进程后替换 `ctjsiptv` 二进制并重新启动即可。保留：
 
