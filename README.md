@@ -1,20 +1,20 @@
-# CTJSIPTV Release
+# CTJSIPTV
 
-## CTJSIPTV 1.0.0
+## 1. 功能
 
-当前正式版本确定为 **1.0.0**。这是首个稳定版本，完成江苏电信 IPTV 动态认证与 Portal、直播/回看、EPG/XMLTV、VOD、Xtream Codes、TVBox/MacCMS、内置 Web UI 以及直播源管理等主要能力。
+- 江苏电信 IPTV 动态认证：`auth → uploadAuthInfo → getServiceList → UserGroupNMB → loadbalanced → Portal`
+- 动态获取 Portal，不依赖固定 Portal IP、固定 33200 端口或 DNS fallback
+- 直播、回看、EPG/XMLTV
+- 电影、剧集、短剧、动漫、少儿、综艺、电竞等 VOD
+- 内置单文件 Web UI，无需额外部署前端
+- Xtream Codes、TVBox/MacCMS
+- rtp2httpd 转发
+- 直播源启停、排序、自定义源与本地频道 Logo
+- VOD 标题清理
 
-Portal 地址由运营商认证链最终的 `loadbalanced` 响应动态取得，IP 与端口均不固定；程序不依赖固定 Portal IP、固定 `33200` 端口或 DNS fallback。
+## 2. 下载与启动
 
-> 1.0.0 的 Release 二进制将在后续构建额度恢复后创建；在对应 Release 出现前，请不要把旧的 beta 二进制视为 1.0.0。
-
-江苏电信 IPTV 服务端公开发行仓库。本仓库只面向最终用户，提供编译后的发行版、部署方法、配置说明和客户端接入方法。服务端源码、上游协议分析和开发实现文档保存在私有开发仓库。
-
-> 使用前提：运行 CTJSIPTV 的设备需要能够访问已经融合到本地网络的江苏电信 IPTV 专网。本项目不负责光猫、路由器或运营商侧的 IPTV 接入与业务订购。
-
-## 下载
-
-1.0.0 Release 创建后，请从 Releases 下载对应平台的正式版：
+正式版本从 `Primovist/CTJSIPTV-Release` 的 Releases 下载。支持：
 
 | 文件 | 平台 |
 |---|---|
@@ -22,40 +22,31 @@ Portal 地址由运营商认证链最终的 `loadbalanced` 响应动态取得，
 | `ctjsiptv-linux-arm64` | Linux arm64 |
 | `ctjsiptv-linux-amd64` | Linux x86_64 / amd64 |
 
-macOS Apple Silicon 已在实际 IPTV 网络中验证。Linux 构建能否正常使用还取决于系统运行库、网卡和 IPTV 路由配置。
-
-## 快速部署
-
-以 macOS arm64 为例：
+准备目录并将下载的文件改名为 `ctjsiptv`：
 
 ```sh
-mkdir -p ~/CTJSIPTV
-cd ~/CTJSIPTV
-curl -L -o ctjsiptv https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-arm64
 chmod +x ctjsiptv
+# macOS 如被 Gatekeeper 标记，可移除下载隔离属性
 xattr -d com.apple.quarantine ./ctjsiptv 2>/dev/null || true
 ```
 
-Linux 将文件名替换为对应的 `ctjsiptv-linux-arm64` 或 `ctjsiptv-linux-amd64`。
-
-创建 `ctjsiptv.conf`：
+复制 `ctjsiptv.conf.example` 为 `ctjsiptv.conf`，至少填写：
 
 ```ini
-IPTV_USER_ID=你的IPTV用户ID
-IPTV_PASSWORD=你的IPTV密码
-IPTV_STB_ID=你的STB_ID
-
-# 可选：不填写时自动检测
-# IPTV_MAC=AA:BB:CC:DD:EE:FF
-# IPTV_IP=192.168.1.100
-# NIC=en0
-
-# 服务监听
-# LISTEN=[::]:8765
-
-# 可选：直播转发
-# RTP2HTTPD=http://192.168.1.2:5140
+IPTV_USER_ID=
+IPTV_PASSWORD=
+IPTV_STB_ID=
 ```
+
+多网卡、VPN 或 Surge 环境建议显式指定 IPTV 网卡：
+
+```ini
+NIC=en0
+IPTV_MAC=
+IPTV_IP=
+```
+
+未填写 MAC/IP 时程序会从选定网卡读取。
 
 启动：
 
@@ -63,180 +54,93 @@ IPTV_STB_ID=你的STB_ID
 ./ctjsiptv -c ./ctjsiptv.conf
 ```
 
-默认监听 `[::]:8765`。可验证：
+默认监听 `[::]:8765`。检查：
 
 ```sh
 curl http://127.0.0.1:8765/api/health
 curl http://127.0.0.1:8765/api/status
 ```
 
-## 配置
-
-配置文件使用 `KEY=VALUE` 格式。主要配置：
-
-| 配置项 | 必填 | 说明 |
-|---|---:|---|
-| `IPTV_USER_ID` | 是 | IPTV 用户 ID |
-| `IPTV_PASSWORD` | 是 | IPTV 密码 |
-| `IPTV_STB_ID` | 是 | 机顶盒 STB ID |
-| `IPTV_MAC` | 否 | 未配置时从选定网卡读取 |
-| `IPTV_IP` | 否 | 未配置时从选定网卡读取 IPv4 |
-| `NIC` | 否 | IPTV 网络接口；未配置时自动检测 |
-| `LISTEN` | 否 | 默认 `[::]:8765` |
-| `RTP2HTTPD` | 否 | RTP/HTTP 转发服务地址 |
-| `LIVE_OVERRIDES` | 否 | 直播源管理数据文件 |
-| `XTREAM_ENABLED` | 否 | 是否启用 Xtream |
-| `XTREAM_USERNAME` | 否 | Xtream 用户名 |
-| `XTREAM_PASSWORD` | 否 | Xtream 密码 |
-| `XTREAM_PUBLIC_URL` | 否 | Xtream 对外访问基址 |
-| `PUBLIC_URL` | 否 | 推荐的统一公开根地址（反向代理/域名部署） |
-| `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录 |
-| `VOD_TITLE_CLEAN_RULES` | 否 | VOD 标题清理规则文件 |
-| `TVBOX_PUBLIC_URL` | 否 | TVBox 对外访问基址 |
-
-`RTP2HTTPD` 示例：
-
-```ini
-RTP2HTTPD=http://192.168.1.10:5140
-```
-
-直播源启用、禁用、自定义源和排序默认保存在配置文件同目录的 `live-overrides.json`。如需指定位置：
-
-```ini
-LIVE_OVERRIDES=/path/to/live-overrides.json
-```
-
-## 使用方式
-
-CTJSIPTV 使用同一套 IPTV 数据提供四种访问方式：
-
-```text
-江苏电信 IPTV
-      │
-      ▼
-   CTJSIPTV
-      │
-      ├── 原生 API ── 内置网页
-      ├── Xtream Codes
-      └── TVBox / MacCMS
-```
-
-原生 API 是基础接口；内置网页、Xtream 和 TVBox 是针对不同客户端提供的访问方式。
-
-## 内置网页
-
-浏览器访问：
+浏览器直接访问：
 
 ```text
 http://设备IP:8765/
 ```
 
-或：
+内置 Web UI 已由 Release 构建过程嵌入二进制，因此普通用户**不需要 Apache/Nginx，也不需要单独部署 index.html**。
 
-```text
-http://设备IP:8765/index.html
+## 3. 主要配置
+
+完整配置和注释见 `ctjsiptv.conf.example`。
+
+| 配置项 | 必填 | 说明 |
+|---|---:|---|
+| `IPTV_USER_ID` | 是 | IPTV 用户 ID |
+| `IPTV_PASSWORD` | 是 | IPTV 密码 |
+| `IPTV_STB_ID` | 是 | STB ID |
+| `NIC` | 否 | IPTV 网络接口；未配置时自动检测 |
+| `IPTV_MAC` | 否 | 未配置时从 NIC 读取 |
+| `IPTV_IP` | 否 | 未配置时从 NIC 读取 IPv4 |
+| `LISTEN` | 否 | 默认 `[::]:8765` |
+| `PUBLIC_URL` | 否 | 统一公开根地址 |
+| `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址 |
+| `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录 |
+| `LIVE_OVERRIDES` | 否 | 直播源管理文件 |
+| `VOD_TITLE_CLEAN_RULES` | 否 | VOD 标题清理规则文件 |
+| `XTREAM_ENABLED` | 否 | 启用 Xtream |
+| `XTREAM_USERNAME` / `XTREAM_PASSWORD` | 否 | Xtream 独立凭据 |
+| `XTREAM_PUBLIC_URL` | 否 | 单独覆盖 Xtream 公开地址 |
+| `TVBOX_PUBLIC_URL` | 否 | 单独覆盖 TVBox 公开地址 |
+
+推荐反向代理/公网场景统一配置：
+
+```ini
+PUBLIC_URL=https://iptv.example.com
 ```
 
-网页提供影视分类、搜索、详情、分集、播放、直播、EPG、运行状态以及直播源管理。
+## 4. rtp2httpd
 
-直播源管理支持查看上游频道、启用/禁用频道、添加/编辑/删除自定义直播源以及调整全局频道顺序。
+客户端不能直接访问 IPTV 业务网，或需要将直播/回看统一经外部入口输出时：
 
-## 原生 API
-
-成功的 JSON API 使用 `code=0`。EPG 直接输出 XMLTV，直播列表输出扩展 M3U。
-
-### 状态与分类
-
-| Method | Path | 说明 |
-|---|---|---|
-| GET | `/api/health` | 服务健康状态 |
-| GET | `/api/status` | 服务、IPTV 会话、网卡等状态 |
-| GET | `/api/categories` | 业务类型 |
-| GET | `/api/categories/{type}` | 动态分类 |
-| GET | `/api/categories/variety` | 综艺分类 |
-| GET | `/api/categories/esports` | 电竞分类 |
-| GET | `/api/filters/{type}` | 筛选项 |
-
-支持的业务类型：
-
-| ID | 内容 |
-|---|---|
-| `movie` | 电影 |
-| `drama` | 剧集 |
-| `short_drama` | 短剧 |
-| `anime` | 动漫 |
-| `kids` | 少儿 |
-| `variety` | 综艺 |
-| `esports` | 电竞 |
-
-### 点播
-
-```text
-GET /api/vod?type=movie&page=1
-GET /api/vod?type=drama&page=1
-GET /api/vod?type=short_drama&page=1
-GET /api/vod?type=anime&page=1
-GET /api/vod?type=kids&page=1
-GET /api/vod?type=variety&category=<分类ID>&page=1
-GET /api/vod?type=esports&category=<分类ID>&page=1
+```ini
+RTP2HTTPD=https://rtp2httpd.example.com:444
 ```
 
-详情：
+rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。未配置时保留上游原始播放地址。
 
-```text
-GET /api/vod/{id}?type=drama
+## 5. 内置 Web UI
+
+访问 `http://设备IP:8765/` 即可使用。网页提供影视分类、搜索、详情、分集、播放、直播、EPG、运行状态、直播源管理及 VOD 标题规则管理。
+
+`live-overrides.json` 与 `vod-title-clean.json` 默认自动定位到 `ctjsiptv.conf` 所在目录，也可以通过配置项指定路径。
+
+直播源结构：
+
+```json
+{
+  "disabled": [],
+  "order": [],
+  "custom": []
+}
 ```
 
-播放：
+VOD 标题规则结构：
 
-```text
-GET /api/play/{id}?type=movie
-GET /api/play/{id}?type=drama&episode_id={episode_id}
+```json
+{
+  "prefix": [],
+  "suffix": [],
+  "regex": []
+}
 ```
 
-### 搜索
-
-```text
-GET /api/search?q=庆余年
-GET /api/search?q=庆余年&type=drama&page=1&page_size=20
-GET /api/search/suggest?q=QYN
-```
-
-### 直播
-
-```text
-GET /api/live/rtp
-GET /api/live/http
-GET /api/live/rtp/rtp2httpd
-GET /api/live/http/rtp2httpd
-```
-
-前两个接口提供直连直播列表；后两个在配置 `RTP2HTTPD` 后输出经过转发的地址。
-
-### EPG
-
-```text
-GET /api/epg
-GET /api/epg?days=7
-GET /api/epg/CCTV-1
-GET /api/epg/CCTV-1?days=7
-```
-
-EPG 使用 XMLTV 格式。服务会缓存频道目录和节目数据，并在每天北京时间零点更新缓存。
-
-## Xtream Codes
-
-适用于 Lume 等支持 Xtream Codes 的客户端。
-
-配置：
+## 6. Xtream Codes
 
 ```ini
 XTREAM_ENABLED=true
 XTREAM_USERNAME=iptv
 XTREAM_PASSWORD=change-me
-
-# 使用域名或反向代理时建议配置
-XTREAM_PUBLIC_URL=https://iptv.example.com
+PUBLIC_URL=https://iptv.example.com
 ```
 
 客户端填写：
@@ -247,163 +151,81 @@ Username: iptv
 Password: change-me
 ```
 
-使用反向代理时将 Server 改为 `XTREAM_PUBLIC_URL`。
+主要兼容 `/player_api.php`、`/xmltv.php`、直播/VOD/Series、EPG 与 timeshift。Xtream 凭据仅用于 CTJSIPTV 客户端鉴权，不要复用运营商 IPTV 密码。
 
-兼容的主要能力包括：
+## 7. TVBox / MacCMS
 
-```text
-/player_api.php
-/xmltv.php
-
-get_live_categories
-get_live_streams
-
-get_vod_categories
-get_vod_streams
-get_vod_info
-
-get_series_categories
-get_series
-get_series_info
-
-get_short_epg
-get_simple_data_table
-```
-
-播放路径包括：
-
-```text
-/live/{username}/{password}/{stream_id}.ts
-/live/{username}/{password}/{stream_id}.m3u8
-
-/movie/{username}/{password}/{stream_id}.*
-/series/{username}/{password}/{stream_id}.*
-
-/timeshift/{username}/{password}/{duration}/{start}/{stream_id}.ts
-```
-
-XMLTV：
-
-```text
-/xmltv.php?username=iptv&password=change-me
-```
-
-直播的 `epg_channel_id` 与 XMLTV channel ID 对应。支持该能力的客户端可以显示节目单和历史节目回放。
-
-配置 `RTP2HTTPD` 后，Xtream 的直播、点播和回放会使用相应的转发输出。
-
-## TVBox
-
-TVBox 支持采用 `type: 1` 的 MacCMS JSON 接口接入。
-
-### 推荐：直接使用配置入口
+TVBox 推荐直接使用：
 
 ```text
 http://设备IP:8765/tvbox.json
 ```
 
-如果经过反向代理：
-
-```ini
-TVBOX_PUBLIC_URL=https://iptv.example.com
-```
-
-则使用：
-
-```text
-https://iptv.example.com/tvbox.json
-```
-
-推荐统一配置 `PUBLIC_URL`。`TVBOX_PUBLIC_URL` 可单独覆盖 TVBox 生成地址；未设置时还可使用 `XTREAM_PUBLIC_URL` 或监听地址。
-
-生成的 TVBox 站源核心结构为：
-
-```json
-{
-  "key": "ctjsiptv",
-  "name": "江苏电信 IPTV",
-  "type": 1,
-  "api": "http://设备IP:8765/api.php/provide/vod/",
-  "searchable": 1,
-  "quickSearch": 1,
-  "filterable": 0
-}
-```
-
-配置同时提供 CTJSIPTV 的 HTTP 直播列表。
-
-### TVBox / MacCMS API
-
-入口：
+MacCMS type=1 API：
 
 ```text
 /api.php/provide/vod/
 ```
 
-分类分页：
+使用域名或反向代理时优先配置 `PUBLIC_URL`；如需单独覆盖 TVBox 地址再使用 `TVBOX_PUBLIC_URL`。
+
+## 8. 原生 API
+
+主要入口：
 
 ```text
-GET /api.php/provide/vod/?ac=detail&t=movie&pg=1
+GET /api/health
+GET /api/status
+GET /api/categories
+GET /api/categories/{type}
+GET /api/filters/{type}
+GET /api/vod?type=movie&page=1
+GET /api/vod/{id}?type=drama
+GET /api/play/{id}?type=movie
+GET /api/search?q=关键词
+GET /api/live/rtp
+GET /api/live/http
+GET /api/live/rtp/rtp2httpd
+GET /api/live/http/rtp2httpd
+GET /api/epg?days=7
 ```
 
-搜索：
+EPG 输出 XMLTV，直播列表输出扩展 M3U。
+
+## 9. 内网与公网访问
+
+CTJSIPTV 自带 HTTP 服务和 Web UI，因此内网无需额外 Web Server：
 
 ```text
-GET /api.php/provide/vod/?wd=庆余年&ac=detail
+客户端 → http://CTJSIPTV主机:8765
 ```
 
-详情：
+需要域名、HTTPS 或公网访问时，可在 CTJSIPTV 前增加 Apache/Nginx/Caddy 等反向代理，将请求原样转发到 `127.0.0.1:8765`，并设置：
+
+```ini
+PUBLIC_URL=https://iptv.example.com
+```
+
+反向代理应保留原始 URI；部分 VOD ID 可能包含 `%2F` 等编码字符。公网入口应自行增加身份验证、VPN、IP 白名单或可信网关。不要直接裸露 IPTV 凭据或临时播放鉴权信息。
+
+## 10. 更新
+
+停止旧进程后替换 `ctjsiptv` 二进制并重新启动即可。保留：
 
 ```text
-GET /api.php/provide/vod/?ac=detail&ids={vod_id}
+ctjsiptv.conf
+live-overrides.json
+vod-title-clean.json
+频道 Logo 目录
 ```
 
-详情返回标准字段，例如：
+升级后通过 `/api/status` 检查版本和 IPTV 会话状态。
 
-```text
-vod_id
-vod_name
-vod_pic
-vod_remarks
-vod_year
-vod_area
-vod_actor
-vod_director
-vod_content
-vod_play_from
-vod_play_url
-```
 
-多集内容使用 TVBox/MacCMS 常见的：
+## 项目说明
 
-```text
-第1集$URL#第2集$URL#第3集$URL
-```
+这是 CTJSIPTV 的公开发行与使用说明仓库。正式二进制由本仓库 Releases 提供；源码与开发实现维护在开发仓库。
 
-格式。
+## License
 
-播放通过：
-
-```text
-/tvbox/play.m3u8
-```
-
-按需解析真正的上游播放地址，因此读取剧集详情时不会预先解析所有分集的临时播放 URL。
-
-> TVBox / MacCMS 已纳入 1.0.0 功能范围；实际可用版本以 Releases 中发布的二进制为准。
-
-## 更新
-
-停止服务后，用最新 Release 中对应平台的二进制替换旧文件即可。配置文件和 `live-overrides.json` 独立保存，不需要随程序覆盖。
-
-升级后建议检查：
-
-```sh
-curl http://127.0.0.1:8765/api/status
-```
-
-## 安全
-
-不要将真实 IPTV 用户 ID、密码、Cookie、Token、STB 信息或临时鉴权参数提交到公开仓库。
-
-如果服务暴露到公网，建议通过反向代理、VPN 或可信网关增加访问控制。CTJSIPTV 本身不应被视为面向公网的多用户认证网关。
+仅用于个人学习、协议研究和合法的自有 IPTV 服务接入。使用者应自行确保符合当地法律、运营商服务协议及内容授权要求。
