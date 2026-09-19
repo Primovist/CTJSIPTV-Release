@@ -14,20 +14,32 @@
 
 ## 2. 下载与启动
 
-正式版本从 `Primovist/CTJSIPTV-Release` 的 Releases 下载。支持：
+正式版本统一从 `CTJSIPTV-Release` 的 **Latest Release** 下载：
 
-| 文件 | 平台 |
-|---|---|
-| `ctjsiptv-macos-arm64` | macOS Apple Silicon |
-| `ctjsiptv-linux-arm64` | Linux arm64 |
-| `ctjsiptv-linux-amd64` | Linux x86_64 / amd64 |
+- [macOS Apple Silicon — ctjsiptv-macos-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-arm64)
+- [Linux arm64 — ctjsiptv-linux-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-arm64)
+- [Linux x86_64 / amd64 — ctjsiptv-linux-amd64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-amd64)
 
-准备目录并将下载的文件改名为 `ctjsiptv`：
+命令行可直接下载最新版本。以 macOS Apple Silicon 为例：
 
 ```sh
+curl -fL https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-arm64 -o ctjsiptv
 chmod +x ctjsiptv
-# macOS 如被 Gatekeeper 标记，可移除下载隔离属性
 xattr -d com.apple.quarantine ./ctjsiptv 2>/dev/null || true
+```
+
+Linux arm64：
+
+```sh
+curl -fL https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-arm64 -o ctjsiptv
+chmod +x ctjsiptv
+```
+
+Linux x86_64 / amd64：
+
+```sh
+curl -fL https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-amd64 -o ctjsiptv
+chmod +x ctjsiptv
 ```
 
 复制 `ctjsiptv.conf.example` 为 `ctjsiptv.conf`，至少填写：
