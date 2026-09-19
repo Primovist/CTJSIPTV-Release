@@ -99,12 +99,12 @@ http://设备IP:8765/
 
 ### macOS：launchctl
 
-以下示例假设程序安装在 `/usr/local/ctjsiptv`：
+以下示例将可执行文件安装到 `/usr/local/bin/ctjsiptv`，配置文件保存在 `/usr/local/etc/ctjsiptv/ctjsiptv.conf`：
 
 ```sh
-sudo mkdir -p /usr/local/ctjsiptv
-sudo cp ctjsiptv ctjsiptv.conf /usr/local/ctjsiptv/
-sudo chmod +x /usr/local/ctjsiptv/ctjsiptv
+sudo install -m 755 ctjsiptv /usr/local/bin/ctjsiptv
+sudo mkdir -p /usr/local/etc/ctjsiptv
+sudo cp ctjsiptv.conf /usr/local/etc/ctjsiptv/ctjsiptv.conf
 ```
 
 创建 `~/Library/LaunchAgents/com.ctjsiptv.server.plist`：
@@ -119,9 +119,9 @@ sudo chmod +x /usr/local/ctjsiptv/ctjsiptv
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/ctjsiptv/ctjsiptv</string>
+        <string>/usr/local/bin/ctjsiptv</string>
         <string>-c</string>
-        <string>/usr/local/ctjsiptv/ctjsiptv.conf</string>
+        <string>/usr/local/bin/ctjsiptv.conf</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -164,7 +164,7 @@ launchctl kickstart -k gui/$(id -u)/com.ctjsiptv.server
 ```sh
 sudo mkdir -p /usr/local/ctjsiptv
 sudo cp ctjsiptv ctjsiptv.conf /usr/local/ctjsiptv/
-sudo chmod +x /usr/local/ctjsiptv/ctjsiptv
+sudo chmod +x /usr/local/bin/ctjsiptv
 ```
 
 创建 `/etc/systemd/system/ctjsiptv.service`：
@@ -177,8 +177,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/usr/local/ctjsiptv
-ExecStart=/usr/local/ctjsiptv/ctjsiptv -c /usr/local/ctjsiptv/ctjsiptv.conf
+WorkingDirectory=/usr/local/etc/ctjsiptv
+ExecStart=/usr/local/bin/ctjsiptv -c /usr/local/bin/ctjsiptv.conf
 Restart=on-failure
 RestartSec=5
 
