@@ -449,8 +449,6 @@ vod-title-clean.json
 
 升级后通过 `/api/status` 检查版本和 IPTV 会话状态。
 
-源码开发、架构和构建说明见 [DEVELOPMENT.md](https://github.com/Primovist/CTJSIPTV/blob/main/DEVELOPMENT.md)。
-
 ## License
 
 仅用于个人学习、协议研究和合法的自有 IPTV 服务接入。使用者应自行确保符合当地法律、运营商服务协议及内容授权要求。
