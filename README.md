@@ -17,6 +17,8 @@
 
 ## 2. 运行环境
 
+macOS 最低支持版本为 14；Linux 构建使用 Swift 6.1。
+
 运行 CTJSIPTV 的设备必须能够访问江苏电信 IPTV 专网资源。适用环境包括：
 
 - 江苏电信官方软终端能够正常运行、可直接访问 IPTV 专网的网络环境；
@@ -67,7 +69,9 @@ chmod +x ctjsiptv
 ./ctjsiptv
 ```
 
-程序会生成并持久化稳定软终端设备身份，通过运营商 Zero Config 获取 IPTV Account、Password、STBID 等启动身份，然后继续现有动态 Portal/Auth。启动身份默认保存在配置文件同目录的 `bootstrap.json`（权限 `0600`），后续 Zero Config 暂时不可用时可回退使用。CTJSIPTV 不启动官方软终端的管理心跳，避免持续上报终端在线状态或接收远程退出、重启等控制指令。
+程序会生成并持久化稳定软终端设备身份，通过运营商 Zero Config 获取 IPTV Account、Password、STBID 等启动身份，然后继续现有动态 Portal/Auth。启动身份默认保存在配置文件同目录的 `bootstrap.json`（权限 `0600`），后续 Zero Config 暂时不可用时可回退使用。官方软终端心跳默认关闭；设置 `IPTV_HEARTBEAT_ENABLED=true` 后每 30 秒发送一次，需要 Zero Config 返回的 `virtualAccount`。诊断页和 `/api/diagnostics` 只展示最近一次心跳的传输状态、业务码、说明及 HLS / 单播字段；不执行服务端指令或改变播放策略。原 APK 将 `hlsStatus=0` 映射为 HLS 偏好开启，将 `unicastNode` 用作 RTSP 单播节点选择；这两个字段都不是 HLS 服务器地址，CTJSIPTV 目前只记录、不应用它们。
+
+程序启动时及之后每 24 小时检查一次官方 APK 更新，也可从配置网卡所在子网或本机调用 `POST /api/official-apk` 手动检查。`GET /api/official-apk` 查看最近的版本、下载地址和检查错误。检查使用已实测返回完整 APK 的 `/api/apk/query`；新版 `/api/apk/upgrade/query` 同时涉及插件更新，暂不将其版本写入启动请求。发现更高版本后自动更新 `DATA_DIR/official-client.json` 中的 `apkVersion` 和 `apkVersionName`；该 JSON 还保存 Zero Config 的固定客户端字段和 Portal 的 `userAgent`，首次启动自动创建。默认客户端身份采用 Android 17 / Apple TV；旧版默认 Android 12 / Apple Mac 档案会迁移，自定义终端描述保留。修改 `userAgent` 后须重启服务。检查记录保存在 `DATA_DIR/official-apk-status.json`。可用 `IPTV_OFFICIAL_CLIENT_PROFILE` 和 `IPTV_OFFICIAL_APK_STATUS` 指定路径。仅更新请求档案，不下载或安装 APK。
 
 成功认证后，直播频道快照默认保存在配置文件同目录的 `channel-cache.json`（权限 `0600`）。Portal 暂时无法刷新时，服务可继续使用最后一次成功快照；快照不保存 JSESSIONID 或 UserToken，但频道播放地址本身属于敏感数据，不应对其他用户开放该文件。
 
@@ -244,16 +248,23 @@ sudo systemctl stop ctjsiptv
 | `PUBLIC_URL` | 否 | 统一公开根地址 |
 | `DATA_DIR` | 否 | 持久化数据目录；默认是配置文件所在目录 |
 | `IPTV_BOOTSTRAP_CACHE` | 否 | Zero Config 身份文件；默认 `DATA_DIR/bootstrap.json` |
+| `IPTV_COOKIE_FILE` | 否 | 上游会话 Cookie 文件；默认 `DATA_DIR/session-cookies.txt` |
 | `LIVE_CHANNEL_CACHE` | 否 | 直播频道快照；默认 `DATA_DIR/channel-cache.json` |
 | `EPG_CACHE` | 否 | 最近成功的七天 EPG 快照；默认 `DATA_DIR/epg-cache.json` |
 | `IMAGE_CACHE_DIR` | 否 | 图片缓存目录；默认 `DATA_DIR/image-cache` |
-| `RTP2HTTPD` | 点播必需 | rtp2httpd HTTP/HTTPS 根地址；未配置时点播路由返回 HTTP 503 |
-| `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录 |
+| `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射文件；默认 `DATA_DIR/vod-catalog.json` |
+| `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址；未配置时点播、TVBox 与 Xtream VOD/Series 直接返回上游原始播放地址 |
+| `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录；默认是配置文件同目录下的 `Logo/` 文件夹 |
 | `LIVE_OVERRIDES` | 否 | 直播源管理文件 |
 | `VOD_TITLE_CLEAN_RULES` | 否 | VOD 标题清理规则文件 |
-| `XTREAM_ENABLED` | 否 | 启用 Xtream |
+| `STRM_ENABLED` | 否 | 启用 STRM 媒体库导出；默认关闭 |
+| `STRM_OUTPUT_DIR` | 否 | STRM 输出目录；默认配置文件同目录的 `strm/` |
+| `STRM_NAMING_MODE` | 否 | `standard` 或 `infuse-edition`；默认 `standard` |
+| `XTREAM_ENABLED` | 否 | 启用 Xtream；默认关闭 |
 | `XTREAM_USERNAME` / `XTREAM_PASSWORD` | 否 | Xtream 独立凭据 |
-| `TVBOX_ENABLED` | 否 | 启用 TVBox / MacCMS；默认启用 |
+| `TVBOX_ENABLED` | 否 | 启用 TVBox / MacCMS；默认关闭 |
+
+`XTREAM_REGISTRY` 和旧默认文件 `xtream-vod-registry.json` 不再读取或自动迁移。需要保留已有稳定 VOD ID 时，请在切换版本前自行把旧文件移到 `VOD_CATALOG` 指向的位置。
 
 推荐反向代理/公网场景统一配置：
 
@@ -275,17 +286,21 @@ chmod 700 /usr/local/etc/ctjsiptv/data
 DATA_DIR=/usr/local/etc/ctjsiptv/data
 ```
 
-如果通过 launchd 或 systemd 使用其他账号运行，应将目录所有者改为实际运行账号。该账号必须能够读取配置目录并读写 `DATA_DIR`；身份、频道快照、EPG 快照和规则文件建议保持 `0600`。不要把 `bootstrap.json`、`channel-cache.json` 或 `epg-cache.json` 提交到版本库。
+所有未单独配置的缓存、映射、规则文件和缓存目录都保存在配置文件同目录；显式设置 `DATA_DIR` 后，未单独配置的持久化内容改为保存到该目录。某个文件或目录配置项一旦单独设置，则优先于 `DATA_DIR`；相对路径始终以 `ctjsiptv.conf` 所在目录为基准。
+
+HTTP 会话只使用一个 `IPTV_COOKIE_FILE`。每次请求会读取当前 Cookie，完成后覆盖为最新 Cookie，并删除其中已经到期的记录；旧版 `/tmp/jsiptv-cookies-<PID>` 文件会立即删除，更换配置后遗留且超过 24 小时未更新的同目录 Cookie 文件也会自动删除，当前活动文件不会被清理。
+
+如果通过 launchd 或 systemd 使用其他账号运行，应将目录所有者改为实际运行账号。该账号必须能够读取配置目录并读写 `DATA_DIR`；身份、Cookie、频道快照、EPG 快照、Xtream 映射和规则文件保持 `0600`。不要把这些运行时文件提交到版本库。
 
 ## 6. rtp2httpd
 
-点播播放地址必须经 rtp2httpd 输出；直播和回放仍可按需选择原始或转发接口：
+rtp2httpd 是可选的播放转发层；直播和回放仍可按需选择原始或转发接口：
 
 ```ini
 RTP2HTTPD=https://rtp2httpd.example.com:444
 ```
 
-rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。未配置时，点播、TVBox 播放以及 Xtream VOD/Series 返回 HTTP 503；直播与回放行为不变。
+rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。配置后，点播、TVBox 播放以及 Xtream VOD/Series 会返回 rtp2httpd 包装地址；未配置时直接返回实时解析出的上游原始地址。原始地址只能由具备 IPTV 专网访问能力的客户端使用；外网或未完成大融合的局域网仍需配置 rtp2httpd。直播与回放行为不变。
 
 ## 7. 内置 Web UI
 
@@ -336,6 +351,8 @@ Password: change-me
 
 ## 9. TVBox / MacCMS
 
+此兼容接口默认关闭，使用前先配置 `TVBOX_ENABLED=true` 并重启服务。
+
 TVBox 推荐直接使用：
 
 ```text
@@ -383,13 +400,21 @@ GET /api/epg?days=7
 
 EPG 输出 XMLTV，直播列表输出扩展 M3U。上游实测支持今天及过去 6 天；明天的 `dateIndex=-1` 对 CCTV-1、CCTV-2 均返回空节目单，因此不伪造第 8 天。
 
-`/api/play/{id}` 返回可长期保存的 CTJSIPTV 点播地址，而不是带时效的上游 URL。播放器请求 `/play/v1/vod.m3u8` 时，服务端才使用当前会话解析最新地址，转换为官方 HLS，并通过 `RTP2HTTPD` 包装后以 HTTP 302 返回；响应带 `Cache-Control: no-store`，避免客户端缓存临时重定向。TVBox 与 Xtream 的点播、剧集播放走同一策略，直播和回放不受影响。
+`/api/play/{id}` 返回可长期保存的 CTJSIPTV 点播地址，而不是带时效的上游 URL。播放器请求 `/play/v1/vod.m3u8` 时，服务端才使用当前会话解析最新地址并转换为官方 HLS：配置 `RTP2HTTPD` 时包装为转发地址，未配置时直接返回上游原始地址，随后以 HTTP 302 跳转；响应带 `Cache-Control: no-store`，避免客户端缓存临时重定向。TVBox 与 Xtream 的点播、剧集播放走同一策略，直播和回放不受影响。
 
-`/api/diagnostics` 使用所选 `NIC` 检查本机 IPv4、IPTV DNS、认证服务器、Zero Config、图片 CDN、当前 EPG Portal 和播放能力，并按原软终端的错误类别返回可解释故障。它不上传诊断信息，也不调用官方管理心跳。
+RTSP 转 HLS 使用官方 GSLB 入口 `http://gslb.itv.jsinfo.net:6060`，沿用 RTSP 的资源路径和查询参数生成 `index.m3u8` 地址；实际媒体节点由 GSLB 调度。心跳不下发 HLS 主机名：`hlsStatus` 是转换开关，`unicastNode` 选择 RTSP 单播节点，不能拿它替代 HLS 地址。诊断页展示 HLS 转换规则是否已实现，不代表已实际播放验证。
+
+`/api/diagnostics` 使用所选 `NIC` 并行探测认证入口、Zero Config、图片 CDN 和当前 EPG Portal，分开报告 TCP 建连耗时与未携带认证信息的 HEAD 响应。HTTP 403／503 仍说明对端有响应，不等于网络不通；HTTP 200 不代表业务认证成功。首字节时间包含 DNS 与建连，总耗时是整次探测请求时间，均不是 ping 延迟。会话状态来自现有会话记录，诊断不会重新认证或触发播放。
+
+域名通过系统解析器查询 IPv4，不代表已验证专网 DNS；直接 IP 不再列为 DNS 查询。当前 Portal 节点标明来自认证／负载均衡下发。播放部分展示配置与可选接口：`GetSPMediaPlayUrl` 仅供 `/api/play/resolve` 通用解析使用，未下发不影响使用独立链路的常规直播、回放和点播，也不能据此判定整体播放受限。
+
+诊断还展示后台心跳的最近一次结果；读取诊断不会额外发送心跳，也不会执行返回的指令。管理页面的 APK 检查、心跳及带时区的媒资时间按浏览器本地时区显示，API 仍返回原始时间；EPG 节目表沿用现有的江苏业务时区。
 
 认证失败后可调用 `POST /api/diagnostics/reauthenticate` 清除旧会话并立即重新认证。`POST /api/diagnostics/restart` 会在响应发出后以相同可执行文件和命令行参数替换当前进程，PID 及 launchd/systemd 监管关系保持不变。内置诊断页提供对应按钮。如果修改了 `LISTEN`，重启后应改用新地址访问。
 
-`GET /api/settings` 返回全部受支持配置项及分组、类型和生效方式；密码与 Secret 只返回是否已配置，不返回明文。`POST /api/settings` 接受 `{"values":{"KEY":"VALUE"}}`，保留原文件注释并原子更新启动时使用的配置文件，权限设置为 `0600`。敏感输入留空表示保留，确需清空时在 `clear_sensitive` 数组中列出键名。IPTV 用户 ID、密码和 STB ID 会立即进入当前运行态并使旧会话失效；其他设置在重启后生效。
+`GET /api/settings` 返回全部受支持配置项及分组、类型、生效方式、配置文件值和当前运行值；密码与 Secret 只返回是否已配置，不返回明文。设置页面的输入框只装载配置文件中实际存在的值，Zero Config、自动探测、环境变量和程序默认值仅显示为当前生效提示。点击保存只提交用户修改过的项目，不会把此前未配置的账号、MAC、IP、路径或布尔默认值写入配置文件。
+
+`POST /api/settings` 接受 `{"values":{"KEY":"VALUE"}}`，保留原文件注释并仅原子更新提交的键，文件权限设置为 `0600`。敏感输入留空表示保留，确需清空时在 `clear_sensitive` 数组中列出键名。IPTV 用户 ID、密码和 STB ID 会立即进入当前运行态并使旧会话失效；其他设置在重启后生效。
 
 示例：
 
@@ -416,7 +441,7 @@ HTTP 服务与 Portal 认证相互独立：完成基础配置读取后先启动�
 
 图片访问按原 APK 逆向结果处理：`imagecdn.jsitv.net:8080/<origin-host>:<port>/...` 优先通过服务端代理访问；CDN 不可用时按 APK 的行为回退到内嵌的 `ioss.jsitv.net:18080` 原站。`imagecache.itv.jsinfo.net:8080`、详情页 `/images/poster/...` 以及 frame326 的相对资源均由服务端通过 IPTV 网卡读取，并缓存到 `IMAGE_CACHE_DIR`，避免 HTTPS 页面混合内容或客户端无法访问 IPTV 专网导致海报空白。
 
-原 APK 的直播频道记录包含 `ChannelLogoURL`。CTJSIPTV 会把该字段保存进频道快照，并用于 M3U、Xtream 和 Xtream XMLTV；远端台标统一经 `/api/image` 访问。安全白名单除固定图片节点外只额外接受本次认证得到的动态 Portal 主机。配置 `LIVE_LOGO_DIR` 时，本地 PNG 仍优先于上游台标。
+原 APK 的直播频道记录包含 `ChannelLogoURL`。CTJSIPTV 会把该字段保存进频道快照，并用于 M3U、Xtream 和 Xtream XMLTV；远端台标统一经 `/api/image` 访问。安全白名单除固定图片节点外只额外接受本次认证得到的动态 Portal 主机。本地 PNG 默认从配置文件同目录下的 `Logo/` 文件夹读取，也可用 `LIVE_LOGO_DIR` 改写；仅在对应文件存在且可读时优先，否则自动回退到上游台标。
 
 `/api/play/resolve` 对应原软终端的通用 `GetSPMediaPlayUrl` 能力。逆向代码中的 `IptvOutWardService` 和 `IPlguinDataImpl` 从 `CTCSetConfig` 保存的同名配置读取地址，附加 `mediaType`、`mediaCode`，携带 `JSESSIONID` 发起 GET，并解析 `result`、`playUrl`、`message`。CTJSIPTV 按这个已验证契约实现，同时兼容 Portal 的 `CTCSetConfig` 与旧 `jsSetConfig` 写法。只有当前 Portal 动态发布该地址时才启用；不会猜测或硬编码未下发的上游地址。当前 Portal 不支持时，`/api/status` 的 `media_resolver_available` 为 `false`。
 

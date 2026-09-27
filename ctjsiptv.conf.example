@@ -1,61 +1,134 @@
 # CTJSIPTV 1.0.0 配置示例
-# 复制为 ctjsiptv.conf 后填写。不要提交包含真实账号或密码的配置文件。
+# 格式：KEY=VALUE
+# 不需要的可选项保持为空即可。不要把包含真实账号/密码的配置提交到 Git。
 
-# ===== IPTV 认证：必填 =====
+# =============================================================================
+# IPTV 认证（可选覆盖）
+# =============================================================================
+
 IPTV_USER_ID=
 IPTV_PASSWORD=
 IPTV_STB_ID=
 
-# ===== IPTV 网络身份 =====
-# 多网卡、VPN、Surge 等环境建议明确指定 IPTV 业务网卡。
+# 三项全部填写时直接用于 Portal 认证，不调用 Zero Config。
+# 未完整填写时，账号/密码仅作为 latestITVAccount/latestPwd 发送；Portal 认证使用
+# Zero Config 返回的完整运行时身份，失败时回退 bootstrap.json 中最后一次成功身份。
+
+# =============================================================================
+# IPTV 网络身份（可选，但多网卡 / VPN / Surge 环境建议显式设置）
+# =============================================================================
+
+# IPTV 业务出口网卡。留空时尝试根据 itv.jsinfo.net 的系统路由自动判断。
 NIC=en0
-# 留空时从 NIC 自动读取。
+
+# IPTV 业务出口使用的 IPv4 留空时从 NIC 读取。
+# IPTV_MAC 留空时优先复用 bootstrap.json 中的稳定软终端 MAC。无缓存时，
+# 自动 Zero Config 模式生成并保存；完整显式凭据模式读取 NIC 的物理 MAC。
 IPTV_MAC=
 IPTV_IP=
 
-# ===== 可选机顶盒认证字段 =====
+# 官方 Zero Config 心跳。默认关闭；启用后按原 APK 每 30 秒发送一次。
+# 需要 Zero Config 返回的 virtualAccount；仅配置 Portal 凭据且没有匹配的身份缓存时不会发送。
+IPTV_HEARTBEAT_ENABLED=false
+
+# =============================================================================
+# 机顶盒认证扩展字段（可选）
+# =============================================================================
+
+# 通常保持为空。仅在实际认证环境要求时填写。
 IPTV_STB_INFO=
 IPTV_PRMID=
 IPTV_DRM_SUPPLIER=
-# 通常无需填写；认证后会尝试动态获取。
+
+# Portal 认证后会尝试从 portal.properties 动态获取 API Key。
+# 仅在确有需要时手工指定。
 IPTV_API_KEY=
 IPTV_SECRET_KEY=
 
-# ===== HTTP 服务 =====
-# 默认 IPv4/IPv6 双栈监听 8765。
-LISTEN=[::]:8765
-# 旧式仅指定端口方式；设置 LISTEN 后无需设置。
-# PORT=8765
+# =============================================================================
+# CTJSIPTV HTTP 服务
+# =============================================================================
 
-# 反向代理/域名访问时推荐设置统一公开根地址。
+# 默认双栈监听 8765。
+LISTEN=[::]:8765
+
+# 公网/反向代理访问 CTJSIPTV 时建议设置统一公开根地址。
+# 只能填写 http:// 或 https:// origin，不要附加路径、查询参数。
 # 示例：https://iptv.example.com:444
 PUBLIC_URL=
 
-# ===== 直播 =====
-# rtp2httpd 的 HTTP/HTTPS 根地址。
+# =============================================================================
+# 持久化数据
+# =============================================================================
+
+# 默认与本配置文件位于同一目录。相对路径也以配置目录为基准。
+# 可单独设置到由 CTJSIPTV 运行用户拥有且可读写的目录。
+DATA_DIR=
+
+# 留空时分别使用 DATA_DIR/bootstrap.json、DATA_DIR/session-cookies.txt、
+# DATA_DIR/channel-cache.json、DATA_DIR/epg-cache.json。
+# 单项配置为相对路径时，始终以本配置文件所在目录为基准，不受 DATA_DIR 影响。
+IPTV_BOOTSTRAP_CACHE=
+# 仅保留一个活动 Cookie 文件；过期 Cookie 和超过 24 小时的旧版 Cookie 文件自动清理。
+IPTV_COOKIE_FILE=
+# 官方客户端档案保存 APK 版本与 Zero Config 请求体中的设备字段。
+# 留空默认 DATA_DIR/official-client.json；首次启动自动创建。
+IPTV_OFFICIAL_CLIENT_PROFILE=
+# 最近一次官方 APK 检查结果；留空默认 DATA_DIR/official-apk-status.json。
+IPTV_OFFICIAL_APK_STATUS=
+LIVE_CHANNEL_CACHE=
+EPG_CACHE=
+# 全局 VOD 身份与稳定播放映射文件。留空默认 DATA_DIR/vod-catalog.json。
+VOD_CATALOG=
+
+# 运营商图片代理的本地缓存目录。留空默认 DATA_DIR/image-cache。
+IMAGE_CACHE_DIR=
+
+# =============================================================================
+# 播放输出
+# =============================================================================
+
+# rtp2httpd HTTP/HTTPS 根地址。
+# 可选；配置后点播、TVBox 和 Xtream VOD/Series 返回代理地址，留空则返回上游原始地址。
+# 原始地址要求播放客户端自身具备 IPTV 专网访问能力；直播与回放仍按所选接口决定是否转发。
+# /api/live/{rtp,http}/rtp2httpd 也会输出代理后的直播地址。
 # 示例：https://rtp2httpd.example.com:444
 RTP2HTTPD=
 
-# 可选本地 PNG Logo 目录。
+# 本地频道 Logo 目录。留空默认使用配置文件同目录下的 Logo/ 文件夹；相对路径也以配置文件目录为基准。
+# 对应 PNG 存在时优先通过 /logo/<filename>.png 提供，否则回退到上游台标。
 LIVE_LOGO_DIR=
 
-# 留空默认使用 ctjsiptv.conf 同目录的 live-overrides.json。
-# 相对路径以配置文件所在目录为基准。
-# JSON: {"disabled":[],"order":[],"custom":[]}
+# 直播源管理文件。相对路径以 ctjsiptv.conf 所在目录为基准。
+# 留空默认：同目录 live-overrides.json
+# JSON 结构：{"disabled":[],"order":[],"custom":[]}
 LIVE_OVERRIDES=
 
-# ===== VOD =====
-# 留空默认使用 ctjsiptv.conf 同目录的 vod-title-clean.json。
-# JSON: {"literal":[],"suffix":[],"regex":[]}
-VOD_TITLE_CLEAN_RULES=
+# =============================================================================
+# VOD
+# =============================================================================
 
-# ===== Xtream Codes =====
+# VOD 标题清理规则。相对路径以 ctjsiptv.conf 所在目录为基准。
+# 留空默认：同目录 vod-title-clean.json
+# JSON 结构：{"literal":[],"suffix":[],"regex":[]}
+VOD_TITLE_CLEAN_RULES=
+STRM_ENABLED=false
+STRM_OUTPUT_DIR=
+STRM_NAMING_MODE=standard
+
+# =============================================================================
+# Xtream Codes
+# =============================================================================
+
 XTREAM_ENABLED=false
+
+# 启用 Xtream 后必须设置。请使用独立强密码，不要复用 IPTV_PASSWORD。
 XTREAM_USERNAME=
 XTREAM_PASSWORD=
-# 可单独覆盖 Xtream 公开根地址；通常使用 PUBLIC_URL 即可。
-XTREAM_PUBLIC_URL=
 
-# ===== TVBox / MacCMS =====
-# 可单独覆盖 TVBox 公开根地址；通常使用 PUBLIC_URL 即可。
-TVBOX_PUBLIC_URL=
+# =============================================================================
+# TVBox / MacCMS
+# =============================================================================
+
+# 启用 TVBox 配置、MacCMS API 与播放路由；默认关闭。
+TVBOX_ENABLED=false
