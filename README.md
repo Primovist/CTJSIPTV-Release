@@ -17,7 +17,9 @@
 
 ## 2. 运行环境
 
-macOS 最低支持版本为 14；Linux 构建使用 Swift 6.1。
+macOS 最低支持版本为 14。macOS 发布版在 macOS 本机构建；Linux x86_64 与 arm64 发布版只由 GitHub Actions 构建，使用 Swift 6.1、静态嵌入 Swift 运行库并执行 Strip。Ubuntu 22.04 及 ABI 兼容的 glibc 系统无需安装 Swift 工具链或 Swift 运行库，需提供 curl 与 OpenSSL。
+
+当前 Linux 发布版面向 glibc 系统，不兼容标准 musl OpenWrt 固件；OpenWrt 原生版尚未提供。
 
 运行 CTJSIPTV 的设备必须能够访问江苏电信 IPTV 专网资源。适用环境包括：
 
@@ -40,6 +42,8 @@ CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指�
 - [macOS Intel — ctjsiptv-macos-x86_64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-x86_64)
 - [Linux arm64 — ctjsiptv-linux-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-arm64)
 - [Linux x86_64 / amd64 — ctjsiptv-linux-amd64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-amd64)
+
+Debian/Ubuntu Linux 首次运行前执行 sudo apt update，再执行 sudo apt install -y curl openssl。
 
 命令行可直接下载最新版本。以 macOS Apple Silicon 为例：
 
