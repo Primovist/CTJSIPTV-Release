@@ -266,7 +266,8 @@ sudo systemctl stop ctjsiptv
 | `EPG_CACHE` | 否 | 最近成功的七天 EPG 快照；默认 `DATA_DIR/epg-cache.json` |
 | `IMAGE_CACHE_DIR` | 否 | 图片缓存目录；默认 `DATA_DIR/image-cache` |
 | `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射文件；默认 `DATA_DIR/vod-catalog.json` |
-| `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址；未配置时点播、TVBox 与 Xtream VOD/Series 直接返回上游原始播放地址 |
+| `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址；点播仍按现有策略使用转发，直播是否转发由 `LIVE_OUTPUT_MODE` 选择 |
+| `LIVE_OUTPUT_MODE` | 否 | Xtream 与 TVBox 直播模式：`unicast`、`multicast`；配置 RTP2HTTPD 后还可选 `unicast-forwarded`、`multicast-forwarded`；默认 `unicast` |
 | `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录；默认是配置文件同目录下的 `Logo/` 文件夹 |
 | `LIVE_OVERRIDES` | 否 | 直播源管理文件 |
 | `VOD_TITLE_CLEAN_RULES` | 否 | VOD 标题清理规则文件 |
@@ -313,7 +314,7 @@ rtp2httpd 是可选的播放转发层；直播和回放仍可按需选择原始�
 RTP2HTTPD=https://rtp2httpd.example.com:444
 ```
 
-rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。配置后，点播、TVBox 播放以及 Xtream VOD/Series 会返回 rtp2httpd 包装地址；未配置时直接返回实时解析出的上游原始地址。原始地址只能由具备 IPTV 专网访问能力的客户端使用；外网或未完成大融合的局域网仍需配置 rtp2httpd。直播与回放行为不变。
+rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现。配置后，点播、TVBox 点播以及 Xtream VOD/Series 继续按原策略使用转发地址；Xtream/TVBox 直播是否转发由“Xtream / TVBox 直播输出”模式选择。直连模式返回上游原始地址，播放端需要具备 IPTV 专网访问能力。
 
 ## 7. 内置 Web UI
 
@@ -379,6 +380,10 @@ MacCMS type=1 API：
 ```
 
 使用域名或反向代理时配置唯一的 `PUBLIC_URL`；Web、Xtream 与 TVBox 会共同使用它。
+
+设置页的“Xtream / TVBox 直播输出”选择统一影响这两个客户端：单播输出 HTTP/HTTPS，组播输出 RTP/UDP；配置 RTP2HTTPD 后可选择对应的转发模式。未配置转发地址时，转发选项会隐藏，遗留的转发模式也会自动回退到对应直连模式。原生 API 与 APTV 的直播列表不受此设置影响。
+
+TVBox 配置中的直播入口 `/tvbox/live` 使用当前所选模式。单播回放模板以 Unix 秒级时间戳传递，由 `/tvbox/catchup.m3u8` 转为上游 UTC `Playseek`，避免设备时区造成 8 小时偏差。切换输出模式后，刷新 TVBox 的直播列表。
 
 ## 10. 原生 API
 
@@ -453,6 +458,8 @@ HTTP 服务与 Portal 认证相互独立：完成基础配置读取后先启动�
 `/api/metrics` 只返回当前进程内的匿名计数，例如认证、会话失效、图片缓存命中及按模板归类的请求数；不持久化，也不发送到运营商或第三方。
 
 图片访问按原 APK 逆向结果处理：`imagecdn.jsitv.net:8080/<origin-host>:<port>/...` 优先通过服务端代理访问；CDN 不可用时按 APK 的行为回退到内嵌的 `ioss.jsitv.net:18080` 原站。`imagecache.itv.jsinfo.net:8080`、详情页 `/images/poster/...` 以及 frame326 的相对资源均由服务端通过 IPTV 网卡读取，并缓存到 `IMAGE_CACHE_DIR`，避免 HTTPS 页面混合内容或客户端无法访问 IPTV 专网导致海报空白。
+
+Web、TVBox/MacCMS 和 Xtream 共用服务端海报选择与详情补全：电竞列表的 `default.png`、`defaultcolumn_n.jpg` 仅作为最后回退；优先获取详情中的真实海报，兼容备用海报字段和剧集海报。临时补全失败不会永久缓存为空图。
 
 原 APK 的直播频道记录包含 `ChannelLogoURL`。CTJSIPTV 会把该字段保存进频道快照，并用于 M3U、Xtream 和 Xtream XMLTV；远端台标统一经 `/api/image` 访问。安全白名单除固定图片节点外只额外接受本次认证得到的动态 Portal 主机。本地 PNG 默认从配置文件同目录下的 `Logo/` 文件夹读取，也可用 `LIVE_LOGO_DIR` 改写；仅在对应文件存在且可读时优先，否则自动回退到上游台标。
 

@@ -89,11 +89,15 @@ IMAGE_CACHE_DIR=
 # =============================================================================
 
 # rtp2httpd HTTP/HTTPS 根地址。
-# 可选；配置后点播、TVBox 和 Xtream VOD/Series 返回代理地址，留空则返回上游原始地址。
-# 原始地址要求播放客户端自身具备 IPTV 专网访问能力；直播与回放仍按所选接口决定是否转发。
-# /api/live/{rtp,http}/rtp2httpd 也会输出代理后的直播地址。
+# 可选。配置后，点播、TVBox 点播以及 Xtream VOD/Series 按现有策略使用代理地址。
+# Xtream / TVBox 直播是否转发由下方 LIVE_OUTPUT_MODE 选择；原生直播 API 的转发地址仍见 /api/live/{rtp,http}/rtp2httpd。
 # 示例：https://rtp2httpd.example.com:444
 RTP2HTTPD=
+# Xtream 与 TVBox 的直播地址模式：
+# unicast=单播（HTTP/HTTPS）；multicast=组播（RTP/UDP）。默认单播。
+# 配置 RTP2HTTPD 后可选 unicast-forwarded=单播·转发、multicast-forwarded=组播·转发。
+# 未配置 RTP2HTTPD 时，网页设置会隐藏转发选项，遗留转发值自动回退到对应直连模式。
+LIVE_OUTPUT_MODE=unicast
 
 # 本地频道 Logo 目录。留空默认使用配置文件同目录下的 Logo/ 文件夹；相对路径也以配置文件目录为基准。
 # 对应 PNG 存在时优先通过 /logo/<filename>.png 提供，否则回退到上游台标。
