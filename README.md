@@ -45,26 +45,7 @@ CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指�
 
 Debian/Ubuntu Linux 首次运行前执行 sudo apt update，再执行 sudo apt install -y curl openssl。
 
-OpenSSL 3 默认未启用 legacy provider，可能导致 Portal 认证报错 `Error setting cipher DES-ECB`。遇到此错误时，为 CTJSIPTV 单独创建 OpenSSL 配置并通过 `OPENSSL_CONF` 启动；不需要修改系统全局 OpenSSL 配置，也不需要创建 IPTV 配置文件：
-
-```sh
-cat > "$HOME/ctjsiptv-openssl.cnf" <<'EOF'
-openssl_conf = openssl_init
-[openssl_init]
-providers = provider_sect
-[provider_sect]
-default = default_sect
-legacy = legacy_sect
-[default_sect]
-activate = 1
-[legacy_sect]
-activate = 1
-EOF
-
-OPENSSL_CONF="$HOME/ctjsiptv-openssl.cnf" NIC=eth0 ./ctjsiptv
-```
-
-将 `eth0` 替换为 IPTV 网络所在网卡。若使用 systemd，在服务的 `[Service]` 段添加 `Environment=OPENSSL_CONF=/home/用户名/ctjsiptv-openssl.cnf`，然后重启服务。
+OpenSSL 3 将 DES-ECB 放在 legacy provider 中。当前版本会在认证时自动加载该 provider，正常情况下无需手动设置 `OPENSSL_CONF` 或修改系统 OpenSSL 配置。若仍出现 `Error setting cipher DES-ECB`，请确认系统安装的 OpenSSL 包包含 legacy provider 模块，并更新到最新程序版本。
 
 命令行可直接下载最新版本。以 macOS Apple Silicon 为例：
 
