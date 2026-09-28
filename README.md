@@ -17,7 +17,18 @@
 
 ## 2. 运行环境
 
-macOS 最低支持版本为 14。macOS 发布版在 macOS 本机构建；Linux x86_64 与 arm64 发布版只由 GitHub Actions 构建，使用 Swift 6.1、静态嵌入 Swift 运行库并执行 Strip。Ubuntu 22.04 及 ABI 兼容的 glibc 系统无需安装 Swift 工具链或 Swift 运行库，需提供 curl 与 OpenSSL。
+macOS 最低支持版本为 14。Linux x86_64 与 arm64 发布版使用 Swift 6.1 构建，静态嵌入 Swift 运行库并执行 Strip，因此无需安装 Swift 工具链或 Swift 运行库。Linux 版以 Ubuntu 22.04 为构建基线，适用于 ABI 兼容的 glibc 系统。
+
+Linux 二进制仍动态依赖系统运行库，包括 glibc、`libcurl.so.4`、`libssl.so.3`、`libcrypto.so.3`、`libstdc++.so.6`、`libgcc_s.so.1` 和 `libm.so.6`。此外，系统的 libcurl 可能依赖 HTTP/2、SSH、PSL、压缩及认证相关共享库；具体清单随发行版和 libcurl 构建选项而异。通过发行版包管理器安装 curl 和 OpenSSL 通常会一并安装这些传递依赖；若系统精简或使用自定义 libcurl，请确认相关共享库均已安装。
+
+Debian/Ubuntu 首次运行前安装依赖：
+
+```sh
+sudo apt update
+sudo apt install -y curl openssl
+```
+
+可以运行 `ldd ./ctjsiptv` 检查动态依赖；输出中如有 `not found`，请安装对应的系统运行库。
 
 当前 Linux 发布版面向 glibc 系统，不兼容标准 musl OpenWrt 固件；OpenWrt 原生版尚未提供。
 
@@ -42,10 +53,6 @@ CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指�
 - [macOS Intel — ctjsiptv-macos-x86_64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-x86_64)
 - [Linux arm64 — ctjsiptv-linux-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-arm64)
 - [Linux x86_64 / amd64 — ctjsiptv-linux-amd64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-linux-amd64)
-
-Debian/Ubuntu Linux 首次运行前执行 sudo apt update，再执行 sudo apt install -y curl openssl。
-
-OpenSSL 3 将 DES-ECB 放在 legacy provider 中。当前版本会在认证时自动加载该 provider，正常情况下无需手动设置 `OPENSSL_CONF` 或修改系统 OpenSSL 配置。若仍出现 `Error setting cipher DES-ECB`，请确认系统安装的 OpenSSL 包包含 legacy provider 模块，并更新到最新程序版本。
 
 命令行可直接下载最新版本。以 macOS Apple Silicon 为例：
 
