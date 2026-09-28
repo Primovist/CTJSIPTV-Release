@@ -258,7 +258,8 @@ sudo systemctl stop ctjsiptv
 | `IPTV_MAC` | 否 | 优先复用缓存的软终端 MAC；无缓存时自动模式生成并持久化，完整显式凭据模式读取 NIC |
 | `IPTV_IP` | 否 | 未配置时从 NIC 读取 IPv4 |
 | `LISTEN` | 否 | 默认 `[::]:8765` |
-| `PUBLIC_URL` | 否 | 统一公开根地址 |
+| `MANAGEMENT_CIDRS` | 否 | 管理接口允许访问的 IPv4/IPv6 CIDR，逗号分隔；设置后替代 IPTV NIC 子网规则，本机回环始终允许；留空时沿用 IPTV NIC 子网 |
+| `PUBLIC_URL` | 否 | 统一公开根地址；未设置时，HTTP 响应链接沿用请求的 Host，后台和持久化链接使用 IPTV 网卡地址 |
 | `DATA_DIR` | 否 | 持久化数据目录；默认是配置文件所在目录 |
 | `IPTV_BOOTSTRAP_CACHE` | 否 | Zero Config 身份文件；默认 `DATA_DIR/bootstrap.json` |
 | `IPTV_COOKIE_FILE` | 否 | 上游会话 Cookie 文件；默认 `DATA_DIR/session-cookies.txt` |
@@ -379,7 +380,7 @@ MacCMS type=1 API：
 /api.php/provide/vod/
 ```
 
-使用域名或反向代理时配置唯一的 `PUBLIC_URL`；Web、Xtream 与 TVBox 会共同使用它。
+直接通过设备 IP 访问时无需设置 `PUBLIC_URL`：TVBox、直播清单及 Xtream 返回的本机链接会沿用请求的 Host；STRM 等后台生成的持久化链接使用 IPTV 网卡地址。使用域名、HTTPS 或反向代理时配置唯一的 `PUBLIC_URL`，它会覆盖上述推导并由 Web、Xtream 与 TVBox 共同使用。
 
 设置页的“Xtream / TVBox 直播输出”选择统一影响这两个客户端：单播输出 HTTP/HTTPS，组播输出 RTP/UDP；配置 RTP2HTTPD 后可选择对应的转发模式。未配置转发地址时，转发选项会隐藏，遗留的转发模式也会自动回退到对应直连模式。原生 API 与 APTV 的直播列表不受此设置影响。
 
@@ -451,7 +452,7 @@ curl -X POST http://127.0.0.1:8765/api/diagnostics/reauthenticate
 curl -X POST http://127.0.0.1:8765/api/diagnostics/restart
 ```
 
-设置读取/写入、标题规则写入、重新认证和重启属于管理接口，只接受本机或配置项 `NIC` 所在同一 IP 子网的客户端；其他来源返回 HTTP 403。若通过本机反向代理公开这些路径，请在代理侧额外配置身份验证、VPN 或 IP 白名单。
+设置读取/写入、标题规则写入、重新认证和重启属于管理接口。本机回环始终允许；默认只接受 `NIC` 所在子网的客户端。设置 `MANAGEMENT_CIDRS` 后，改为只接受列表中的 IPv4/IPv6 网段，适用于 IPTV 专网和管理 LAN 使用不同网卡、桥接或 VLAN 的路由器。例如 `MANAGEMENT_CIDRS=192.168.2.0/24,fd00:2::/64`。只填写可信网段，避免 `0.0.0.0/0` 或 `::/0` 这类全地址范围。其他来源返回 HTTP 403。若通过反向代理公开这些路径，请在代理侧额外配置身份验证、VPN 或 IP 白名单。
 
 HTTP 服务与 Portal 认证相互独立：完成基础配置读取后先启动监听，再在后台认证。即使凭据错误，或者首次运行时无凭据、无缓存且 Zero Config 失败，首页、`/api/health`、`/api/status` 和 `/api/diagnostics` 仍保持可访问；`authentication_state` 与 `auth_message` 会显示当前阶段及失败原因。
 
