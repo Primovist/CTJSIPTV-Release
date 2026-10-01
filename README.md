@@ -331,7 +331,7 @@ rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现�
 
 `live-overrides.json` 与 `vod-title-clean.json` 默认自动定位到 `ctjsiptv.conf` 所在目录，也可以通过配置项指定路径。
 
-直播源页面可设置「直出直播源」的回放起止时间格式，保存后立即生效，并持久化到 `live-overrides.json` 的 `catchupFormats.direct`（含 `start`、`end`）。填写 `${}` 内的内容，例如 `(b)yyyyMMddHHmmss|Etc/GMT` 和 `(e)yyyyMMddHHmmss|Etc/GMT`。起止字段可分别留空恢复默认，页面显示当前生效值；播放器需刷新直播列表获取新模板。保存或读取到不支持的格式时会忽略整组自定义值、回退默认格式，并在页面提示及服务日志中记录。TVBox 仍使用 Unix 时间戳参数，由服务器转换为上游 UTC `Playseek`；Xtream 使用自身回放接口，两者都不受此设置影响。
+直播源页面可设置原生 M3U 回放起止时间格式，保存后立即生效，并持久化到 `live-overrides.json` 的 `catchupFormats.direct`（含 `start`、`end`）。填写 `${}` 内播放器会展开的格式，例如 `(b)yyyyMMddHHmmss|Etc/GMT` 和 `(e)yyyyMMddHHmmss|Etc/GMT`。客户端展开时间后，请求 CTJSIPTV 生成的回看地址。配置了 `RTP2HTTPD` 时，频道组优先查找 HD 及以上画质且具备完整 `ch` 节目标识的 RTSP 回看源，使用 `/catchup.rtsp` 保留鉴权 Query 并跳转到 rtp2httpd；没有这类源的频道使用 `/catchup.m3u8` 输出去除鉴权 Query 的 HTTP HLS 地址。未配置 `RTP2HTTPD` 时，所有频道使用 `/catchup.m3u8`。自定义频道的 GSLB 地址暂不转换成鉴权 RTSP 回看。TVBox 将播放器时间改写为 Unix 时间戳，Xtream 使用其回放参数；两者与原生 M3U 使用同一套频道选择和回看解析逻辑。起止字段可分别留空恢复默认格式；修改后需刷新客户端列表。保存或读取到不支持的格式时会回退默认值并在页面提示及服务日志中记录。
 
 直播源结构：
 
@@ -392,7 +392,7 @@ MacCMS type=1 API：
 
 设置页的“Xtream / TVBox 直播输出”选择统一影响这两个客户端：单播输出 HTTP/HTTPS，组播输出 RTP/UDP；配置 RTP2HTTPD 后可选择对应的转发模式。未配置转发地址时，转发选项会隐藏，遗留的转发模式也会自动回退到对应直连模式。原生 API 与 APTV 的直播列表不受此设置影响。
 
-TVBox 配置中的直播入口 `/tvbox/live` 使用当前所选模式。默认单播回放模板以 Unix 秒级时间戳传递，由 `/tvbox/catchup.m3u8` 转为上游 UTC `Playseek`，避免设备时区造成 8 小时偏差。TVBox 回放始终由服务器将时间戳转换为上游 UTC `Playseek`。切换输出模式后，刷新 TVBox 的直播列表。
+TVBox 配置中的直播入口 `/tvbox/live` 使用当前所选模式。单播回放模板以 Unix 秒级时间戳传递，避免设备时区造成 8 小时偏差；播放时调用对应配置下的 `/catchup.rtsp` 或 `/catchup.m3u8` 服务入口，与原生 M3U、Xtream 使用相同的回看解析器。切换输出模式后，刷新 TVBox 的直播列表。
 
 ## 10. 原生 API
 
