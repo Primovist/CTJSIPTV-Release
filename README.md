@@ -49,7 +49,7 @@ CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指�
 
 正式版本统一从 `CTJSIPTV-Release` 的 **Latest Release** 下载：
 
-> **升级提醒：** 从 1.6.0 之前的版本升级时，先运行 **1.6.0** 完成 EPG 与 VOD JSON 到 SQLite 的迁移。1.6.0 在迁移事务成功提交后删除对应旧 JSON。**2.0.0 及后续版本只支持 SQLite，不再读取或迁移 JSON**；未使用 1.6.0 转换数据就直接升级，旧缓存和稳定 VOD 映射不会导入。全新安装不受此步骤影响，会直接创建 SQLite 数据库。
+> **升级提醒：** 从 1.6.0 之前的版本升级时，先运行 **1.6.0** 完成 EPG 与 VOD JSON 到 SQLite 的迁移。1.6.0 在迁移事务成功提交后删除对应旧 JSON。**2.0.0 起只支持 SQLite，不再读取或转换 EPG 与 VOD 的旧 JSON**；未使用 1.6.0 转换数据就直接升级，旧缓存和稳定 VOD 映射不会导入。全新安装不受此步骤影响，会直接创建 SQLite 数据库。
 
 - [macOS Apple Silicon — ctjsiptv-macos-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-arm64)
 - [macOS Intel — ctjsiptv-macos-x86_64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-x86_64)
@@ -90,7 +90,7 @@ chmod +x ctjsiptv
 
 成功认证后，直播频道快照默认保存在配置文件同目录的 `channel-cache.json`（权限 `0600`）。Portal 暂时无法刷新时，服务可继续使用最后一次成功快照；快照不保存 JSESSIONID 或 UserToken，但频道播放地址本身属于敏感数据，不应对其他用户开放该文件。
 
-EPG 默认合并官方来源与移动来源：明日优先采用移动来源节目单，官方补缺；今天及过去 6 天以官方为主，移动来源补全缺失时段。移动目录及节目响应提供的 PNG 台标保存到设置的本地台标目录 `LIVE_LOGO_DIR`；未设置时，保存到配置文件同目录的 `Logo/`（默认 `/etc/ctjsiptv/Logo`）。XMLTV 不增加台标标签。移动来源不可用时继续使用原有官方 EPG。最近成功获取的明天、今天及过去 6 天节目单保存到 `epg-cache.sqlite3`（权限 `0600`），按频道和日期读取。服务启动时使用 SQLite 中的节目作为失败兜底，随后补全一次，并在每天凌晨刷新；刷新失败保留旧节目。1.6.0 会迁移旧 `epg-cache.json`，提交成功后删除；从 1.6.0 之前的版本升级到 2.0.0 及以后版本前，必须先运行 1.6.0。EPG 定时任务不再触发直播频道拉取，直播频道由认证流程和 `channel-cache.json` 独立管理。
+EPG 默认合并官方来源与移动来源：明日优先采用移动来源节目单，官方补缺；今天及过去 6 天以官方为主，移动来源补全缺失时段。移动目录及节目响应提供的 PNG 台标保存到设置的本地台标目录 `LIVE_LOGO_DIR`；未设置时，保存到配置文件同目录的 `Logo/`（默认 `/etc/ctjsiptv/Logo`）。XMLTV 不增加台标标签。移动来源不可用时继续使用原有官方 EPG。最近成功获取的明天、今天及过去 6 天节目单保存到 `epg-cache.sqlite3`（权限 `0600`），按频道和日期读取。服务启动时使用 SQLite 中的节目作为失败兜底，随后补全一次，并在每天凌晨刷新；刷新失败保留旧节目。旧版 1.6.0 可迁移 `epg-cache.json`；升级到 2.0.0 前必须先运行该版本完成迁移。EPG 定时任务不再触发直播频道拉取，直播频道由认证流程和 `channel-cache.json` 独立管理。
 
 已有账号配置仍可复制 `ctjsiptv.conf.example` 为 `ctjsiptv.conf` 并显式覆盖：
 
@@ -266,9 +266,9 @@ sudo systemctl stop ctjsiptv
 | `IPTV_BOOTSTRAP_CACHE` | 否 | Zero Config 身份文件；默认 `DATA_DIR/bootstrap.json` |
 | `IPTV_COOKIE_FILE` | 否 | 上游会话 Cookie 文件；默认 `DATA_DIR/session-cookies.txt` |
 | `LIVE_CHANNEL_CACHE` | 否 | 直播频道快照；默认 `DATA_DIR/channel-cache.json` |
-| `EPG_CACHE` | 否 | 最近成功的七天 EPG SQLite 数据库；默认 `DATA_DIR/epg-cache.sqlite3`。1.6.0 会迁移同目录旧版 `epg-cache.json` 并在成功后删除 |
+| `EPG_CACHE` | 否 | 最近成功的七天 EPG SQLite 数据库；默认 `DATA_DIR/epg-cache.sqlite3` |
 | `IMAGE_CACHE_DIR` | 否 | 图片缓存目录；默认 `DATA_DIR/image-cache` |
-| `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射 SQLite 数据库；默认 `DATA_DIR/vod-catalog.sqlite3`。1.6.0 会迁移同目录旧版 `vod-catalog.json` 并在成功后删除 |
+| `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射 SQLite 数据库；默认 `DATA_DIR/vod-catalog.sqlite3` |
 | `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址；点播仍按现有策略使用转发，直播是否转发由 `LIVE_OUTPUT_MODE` 选择 |
 | `LIVE_OUTPUT_MODE` | 否 | Xtream 与 TVBox 直播模式：`unicast`、`multicast`；配置 RTP2HTTPD 后还可选 `unicast-forwarded`、`multicast-forwarded`；默认 `unicast` |
 | `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录；默认是配置文件同目录下的 `Logo/` 文件夹 |
@@ -327,7 +327,7 @@ rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现�
 
 设置页的「分类筛选」支持电影、剧集、短剧、动漫、少儿、综艺和电竞的拖动排序、上下移动及显示开关。点击「保存分类」后立即更新网页、TVBox 和 Xtream 的主分类筛选，隐藏项目保留原位置；「恢复默认」也需保存后生效。配置保存到 `DATA_DIR/vod-type-overrides.json`，使用 `order` 和 `disabled` 字段，重启后保留。允许隐藏全部分类，可随时在设置页重新显示。设置页各分区及配置子分区均可折叠，展开状态保存在当前浏览器。 TVBox 的分类、首页推荐和搜索结果排除隐藏类型；Xtream 的分类和列表按配置输出，电影与剧集分别排序（现有 Xtream 不提供电竞分类）。客户端缓存的分类需刷新后显示。隐藏不影响已有详情和播放地址，也不改变内部媒体索引及 STRM 导出。
 
-直播频道编辑中的「分组」支持选择现有分组或输入新分组，留空保存可恢复自动分组。与排序、启停一样，修改保存在 `live-overrides.json`，重启后保留，并应用于 M3U 与 Xtream 直播输出。同一上游频道的不同清晰度源同步调整；JSON 的 `groups` 字段为频道 ID 到分组名称的映射。
+直播管理读取上游全部逻辑频道，也包括网页添加的频道；禁用的频道不进入播放列表和 EPG，排序与分组由用户设置。每行「关联」可指定独立显示名、回放源、官方 EPG 频道和移动 EPG 补充频道。上游变体同步启停、分组和关联；回放可选任意上游或自定义源。空 EPG 关联按名称自动匹配，“不关联”关闭对应来源。关系保存在 `live-overrides.json` 的 `relations` 字段，旧文件无需迁移；分组仍保存在 `groups`。
 「管理分组」支持新增分组、上下移动调整输出顺序，以及删除分组并将频道移入另一个分组。分组顺序不改变组内频道顺序。默认分组也可删除，未来自动匹配该分组的频道会转入指定分组；至少保留一个分组。空分组保留在管理界面和配置中，M3U 与 Xtream 仅输出包含当前协议可用且已启用频道的分组。`groupOrder` 保存分组列表及顺序，`groupRedirects` 保存已删除分组的迁移目标，旧 override 文件无需手动迁移。
 
 
@@ -341,9 +341,19 @@ rtp2httpd 只负责播放输出转发，不参与 IPTV 认证和 Portal 发现�
 {
   "disabled": [],
   "order": [],
-  "custom": []
+  "custom": [],
+  "relations": {
+    "channel:逻辑频道键": {
+      "displayName": "自定义频道名",
+      "replaySourceID": "回放源ID",
+      "officialEPGKey": "官方EPG频道ID:节目代码",
+      "mobileEPGUUID": "移动EPG频道UUID"
+    }
+  }
 }
 ```
+
+`relations` 中各项可单独省略。上游频道使用 `channel:` 加逻辑频道键作为关系键，不依赖播放地址；自定义频道使用自身 ID。回放源标识会忽略常见认证和时间参数。`officialEPGKey` 和 `mobileEPGUUID` 设为 `__none__` 时关闭对应来源；留空时使用名称自动匹配。管理页面的「关联」会列出完整官方 EPG、移动 EPG 目录及可用回放源。XMLTV 按已启用频道生成，频道名和 EPG 关联与 M3U、Xtream 使用相同设置。
 
 VOD 标题规则结构：
 
@@ -434,9 +444,11 @@ GET /api/live/rtp/rtp2httpd
 GET /api/live/http/rtp2httpd
 GET /api/epg?days=7
 GET /api/epg/mobile-channels
+GET /api/live/channels/relations/options
+POST /api/live/channels/{id}/relation
 ```
 
-EPG 输出 XMLTV，直播列表输出扩展 M3U。`/api/epg/mobile-channels` 返回移动 EPG 频道的顺序、原始名称、归一化名称和 UUID，供频道匹配核对；该接口仅允许本机或配置的管理网段访问。名称归一化会把“南通一套”“南通第1套”等统一为与“南通-1”相同的匹配键。移动频道目录使用频道 UUID 查询节目范围；若目录的频道台标字段为空或无效，再尝试读取移动节目响应里的频道海报。明日数据只有移动来源有内容时才输出；移动来源没有明日节目时保留官方响应。
+EPG 输出 XMLTV，直播列表输出扩展 M3U。`/api/epg` XMLTV 按直播管理中已启用的频道生成，不再使用固定频道白名单；自定义频道同样可选官方和移动 EPG。`/api/live/channels/relations/options` 返回可选的官方频道、移动频道和回放源，仅允许管理访问。`/api/epg/mobile-channels` 返回移动 EPG 频道的顺序、原始名称、归一化名称和 UUID，供频道匹配核对。名称归一化会把“南通一套”“南通第1套”等统一为与“南通-1”相同的匹配键。移动频道目录使用频道 UUID 查询节目范围；若目录的频道台标字段为空或无效，再尝试读取移动节目响应里的频道海报。明日数据只有移动来源有内容时才输出；移动来源没有明日节目时保留官方响应。
 
 `/api/play/{id}` 返回可长期保存的 CTJSIPTV 点播地址，而不是带时效的上游 URL。播放器请求 `/play/v1/vod.m3u8` 时，服务端才使用当前会话解析最新地址并转换为官方 HLS：配置 `RTP2HTTPD` 时包装为转发地址，未配置时直接返回上游原始地址，随后以 HTTP 302 跳转；响应带 `Cache-Control: no-store`，避免客户端缓存临时重定向。TVBox 与 Xtream 的点播、剧集播放走同一策略，直播和回放不受影响。
 
