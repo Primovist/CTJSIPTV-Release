@@ -73,7 +73,7 @@ PUBLIC_URL=
 DATA_DIR=
 
 # 留空时分别使用 DATA_DIR/bootstrap.json、DATA_DIR/session-cookies.txt、
-# DATA_DIR/channel-cache.json、DATA_DIR/epg-cache.json。
+# DATA_DIR/channel-cache.json、DATA_DIR/epg-cache.sqlite3。
 # 单项配置为相对路径时，始终以本配置文件所在目录为基准，不受 DATA_DIR 影响。
 IPTV_BOOTSTRAP_CACHE=
 # 仅保留一个活动 Cookie 文件；过期 Cookie 和超过 24 小时的旧版 Cookie 文件自动清理。
@@ -85,7 +85,7 @@ IPTV_OFFICIAL_CLIENT_PROFILE=
 IPTV_OFFICIAL_APK_STATUS=
 LIVE_CHANNEL_CACHE=
 EPG_CACHE=
-# 全局 VOD 身份与稳定播放映射文件。留空默认 DATA_DIR/vod-catalog.json。
+# 全局 VOD 身份与稳定播放映射 SQLite 数据库。留空默认 DATA_DIR/vod-catalog.sqlite3。
 VOD_CATALOG=
 
 # 运营商图片代理的本地缓存目录。留空默认 DATA_DIR/image-cache。

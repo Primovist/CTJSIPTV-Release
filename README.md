@@ -19,13 +19,13 @@
 
 macOS 最低支持版本为 14。Linux x86_64 与 arm64 发布版使用 Swift 6.1 构建，静态嵌入 Swift 运行库并执行 Strip，因此无需安装 Swift 工具链或 Swift 运行库。Linux 版以 Ubuntu 22.04 为构建基线，适用于 ABI 兼容的 glibc 系统。
 
-Linux 二进制仍动态依赖系统运行库，包括 glibc、`libcurl.so.4`、`libssl.so.3`、`libcrypto.so.3`、`libstdc++.so.6`、`libgcc_s.so.1` 和 `libm.so.6`。此外，系统的 libcurl 可能依赖 HTTP/2、SSH、PSL、压缩及认证相关共享库；具体清单随发行版和 libcurl 构建选项而异。通过发行版包管理器安装 curl 和 OpenSSL 通常会一并安装这些传递依赖；若系统精简或使用自定义 libcurl，请确认相关共享库均已安装。还需要安装 `tzdata`，提供 EPG 和媒资时间处理使用的系统时区数据库。
+Linux 二进制仍动态依赖系统运行库，包括 glibc、`libcurl.so.4`、`libssl.so.3`、`libcrypto.so.3`、`libsqlite3.so.0`、`libstdc++.so.6`、`libgcc_s.so.1` 和 `libm.so.6`。此外，系统的 libcurl 可能依赖 HTTP/2、SSH、PSL、压缩及认证相关共享库；具体清单随发行版和 libcurl 构建选项而异。通过发行版包管理器安装 curl、SQLite 和 OpenSSL 通常会一并安装这些传递依赖；若系统精简或使用自定义 libcurl，请确认相关共享库均已安装。还需要安装 `tzdata`，提供 EPG 和媒资时间处理使用的系统时区数据库。
 
 Debian/Ubuntu 首次运行前安装依赖：
 
 ```sh
 sudo apt update
-sudo apt install -y curl openssl tzdata
+sudo apt install -y curl openssl libsqlite3-0 tzdata
 ```
 
 可以运行 `ldd ./ctjsiptv` 检查动态依赖；输出中如有 `not found`，请安装对应的系统运行库。
@@ -48,6 +48,8 @@ CTJSIPTV 不负责建立 IPTV 专网接入本身；启动前应先确保所指�
 ## 3. 下载与启动
 
 正式版本统一从 `CTJSIPTV-Release` 的 **Latest Release** 下载：
+
+> **升级提醒：** 从 1.6.0 之前的版本升级时，先运行 **1.6.0** 完成 EPG 与 VOD JSON 到 SQLite 的迁移。1.6.0 在迁移事务成功提交后删除对应旧 JSON。**2.0.0 及后续版本只支持 SQLite，不再读取或迁移 JSON**；未使用 1.6.0 转换数据就直接升级，旧缓存和稳定 VOD 映射不会导入。全新安装不受此步骤影响，会直接创建 SQLite 数据库。
 
 - [macOS Apple Silicon — ctjsiptv-macos-arm64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-arm64)
 - [macOS Intel — ctjsiptv-macos-x86_64](https://github.com/Primovist/CTJSIPTV-Release/releases/latest/download/ctjsiptv-macos-x86_64)
@@ -88,7 +90,7 @@ chmod +x ctjsiptv
 
 成功认证后，直播频道快照默认保存在配置文件同目录的 `channel-cache.json`（权限 `0600`）。Portal 暂时无法刷新时，服务可继续使用最后一次成功快照；快照不保存 JSESSIONID 或 UserToken，但频道播放地址本身属于敏感数据，不应对其他用户开放该文件。
 
-EPG 默认合并官方来源与移动来源：明日优先采用移动来源节目单，官方补缺；今天及过去 6 天以官方为主，移动来源补全缺失时段。移动目录及节目响应提供的 PNG 台标保存到设置的本地台标目录 `LIVE_LOGO_DIR`；未设置时，保存到配置文件同目录的 `Logo/`（默认 `/etc/ctjsiptv/Logo`）。XMLTV 不增加台标标签。移动来源不可用时继续使用原有官方 EPG。最近成功获取的明天、今天及过去 6 天节目单默认原子保存到 `epg-cache.json`（权限 `0600`）。服务启动时读取该快照，随后补全一次，并在每天凌晨刷新；刷新失败保留旧快照。EPG 定时任务不再触发直播频道拉取，直播频道由认证流程和 `channel-cache.json` 独立管理。
+EPG 默认合并官方来源与移动来源：明日优先采用移动来源节目单，官方补缺；今天及过去 6 天以官方为主，移动来源补全缺失时段。移动目录及节目响应提供的 PNG 台标保存到设置的本地台标目录 `LIVE_LOGO_DIR`；未设置时，保存到配置文件同目录的 `Logo/`（默认 `/etc/ctjsiptv/Logo`）。XMLTV 不增加台标标签。移动来源不可用时继续使用原有官方 EPG。最近成功获取的明天、今天及过去 6 天节目单保存到 `epg-cache.sqlite3`（权限 `0600`），按频道和日期读取。服务启动时使用 SQLite 中的节目作为失败兜底，随后补全一次，并在每天凌晨刷新；刷新失败保留旧节目。1.6.0 会迁移旧 `epg-cache.json`，提交成功后删除；从 1.6.0 之前的版本升级到 2.0.0 及以后版本前，必须先运行 1.6.0。EPG 定时任务不再触发直播频道拉取，直播频道由认证流程和 `channel-cache.json` 独立管理。
 
 已有账号配置仍可复制 `ctjsiptv.conf.example` 为 `ctjsiptv.conf` 并显式覆盖：
 
@@ -264,9 +266,9 @@ sudo systemctl stop ctjsiptv
 | `IPTV_BOOTSTRAP_CACHE` | 否 | Zero Config 身份文件；默认 `DATA_DIR/bootstrap.json` |
 | `IPTV_COOKIE_FILE` | 否 | 上游会话 Cookie 文件；默认 `DATA_DIR/session-cookies.txt` |
 | `LIVE_CHANNEL_CACHE` | 否 | 直播频道快照；默认 `DATA_DIR/channel-cache.json` |
-| `EPG_CACHE` | 否 | 最近成功的七天 EPG 快照；默认 `DATA_DIR/epg-cache.json` |
+| `EPG_CACHE` | 否 | 最近成功的七天 EPG SQLite 数据库；默认 `DATA_DIR/epg-cache.sqlite3`。1.6.0 会迁移同目录旧版 `epg-cache.json` 并在成功后删除 |
 | `IMAGE_CACHE_DIR` | 否 | 图片缓存目录；默认 `DATA_DIR/image-cache` |
-| `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射文件；默认 `DATA_DIR/vod-catalog.json` |
+| `VOD_CATALOG` | 否 | 全局 VOD 身份与稳定播放映射 SQLite 数据库；默认 `DATA_DIR/vod-catalog.sqlite3`。1.6.0 会迁移同目录旧版 `vod-catalog.json` 并在成功后删除 |
 | `RTP2HTTPD` | 否 | rtp2httpd HTTP/HTTPS 根地址；点播仍按现有策略使用转发，直播是否转发由 `LIVE_OUTPUT_MODE` 选择 |
 | `LIVE_OUTPUT_MODE` | 否 | Xtream 与 TVBox 直播模式：`unicast`、`multicast`；配置 RTP2HTTPD 后还可选 `unicast-forwarded`、`multicast-forwarded`；默认 `unicast` |
 | `LIVE_LOGO_DIR` | 否 | 本地频道 PNG Logo 目录；默认是配置文件同目录下的 `Logo/` 文件夹 |
@@ -353,6 +355,12 @@ VOD 标题规则结构：
 }
 ```
 
+片名清洗完全由上述 JSON 控制：`prefix` 和 `suffix` 按字面量、不区分大小写反复删除，`regex` 按配置顺序执行。没有配置或空规则时保留原文；程序不再自动裁剪空白、压缩空格或删除末尾句点、连字符。例如要删除 `-HD`、`-4K` 且兼容无连字符写法，可在 `regex` 中添加 `"\\s*-?(?:HD|4K)$"`；需要去掉首尾空白时，明确添加 `"^\\s+|\\s+$"`。
+
+点播条目保留 `original_name`，清晰度和语言作为独立版本信息展示，播放仍使用各自的内容 ID。网页和 TVBox 搜索发现的电影、剧集、动漫与少儿内容会保存到本地目录，Xtream 读取快照时自动合入，且不会被范围更窄的分类扫描删除。客户端需刷新 Xtream 目录才能看到新增内容；这不代表已经遍历上游全部搜索结果。搜索发现记录会持续保留，上游后来下架的搜索条目仍可能出现在目录中。
+
+网页详情提供已发现版本的切换按钮，TVBox 详情提供对应播放线路；只关联同类型、原始名称仅有已识别版本后缀差异的条目，已知年份不同时不关联。Xtream 分类接口会为已索引版本增加“电影 · 4K”“剧集 · HD”等分类，进入分类即可按清晰度或语言选择，片名仍保持清洗后的名称。标准 Xtream 详情协议只支持单个播放 ID，不能要求通用播放器弹出同一影片的版本菜单；尚未进入上游目录的版本仍需先通过一次搜索发现，再刷新 Xtream 目录。
+
 ## 8. Xtream Codes
 
 ```ini
@@ -371,6 +379,8 @@ Password: change-me
 ```
 
 主要兼容 `/player_api.php`、`/xmltv.php`、直播/VOD/Series、EPG 与 timeshift。Xtream 凭据仅用于 CTJSIPTV 客户端鉴权，不要复用运营商 IPTV 密码。
+
+启动时首次 EPG 更新完成后，以及每天凌晨 EPG 刷新完成后，服务会在后台更新 VOD SQLite 媒体索引、补全海报并保存电影和剧集列表快照；两份新列表成功保存后，再清理失效媒体及孤立集数。Xtream 客户端刷新电影/剧集列表时直接读取本地 SQLite，不会逐次请求上游目录。首次生成快照期间，已有 SQLite 媒体索引仍可作为列表兜底；首次安装在索引尚未生成时会暂时返回空列表。节目详情和播放地址仍按原流程按需访问上游。
 
 ## 9. TVBox / MacCMS
 
@@ -423,9 +433,10 @@ GET /api/live/http
 GET /api/live/rtp/rtp2httpd
 GET /api/live/http/rtp2httpd
 GET /api/epg?days=7
+GET /api/epg/mobile-channels
 ```
 
-EPG 输出 XMLTV，直播列表输出扩展 M3U。移动频道目录使用频道 UUID 查询节目范围；若目录的频道台标字段为空或无效，再尝试读取移动节目响应里的频道海报。明日数据只有移动来源有内容时才输出；移动来源没有明日节目时保留官方响应。
+EPG 输出 XMLTV，直播列表输出扩展 M3U。`/api/epg/mobile-channels` 返回移动 EPG 频道的顺序、原始名称、归一化名称和 UUID，供频道匹配核对；该接口仅允许本机或配置的管理网段访问。名称归一化会把“南通一套”“南通第1套”等统一为与“南通-1”相同的匹配键。移动频道目录使用频道 UUID 查询节目范围；若目录的频道台标字段为空或无效，再尝试读取移动节目响应里的频道海报。明日数据只有移动来源有内容时才输出；移动来源没有明日节目时保留官方响应。
 
 `/api/play/{id}` 返回可长期保存的 CTJSIPTV 点播地址，而不是带时效的上游 URL。播放器请求 `/play/v1/vod.m3u8` 时，服务端才使用当前会话解析最新地址并转换为官方 HLS：配置 `RTP2HTTPD` 时包装为转发地址，未配置时直接返回上游原始地址，随后以 HTTP 302 跳转；响应带 `Cache-Control: no-store`，避免客户端缓存临时重定向。TVBox 与 Xtream 的点播、剧集播放走同一策略，直播和回放不受影响。
 
