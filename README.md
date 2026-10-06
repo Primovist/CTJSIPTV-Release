@@ -402,6 +402,8 @@ TVBox 推荐直接使用：
 http://设备IP:8765/tvbox.json
 ```
 
+配置中的 `lives[].epg` 提供 `/api/epg/{name}?date={date}` 模板，由客户端替换频道名和日期后获取现有 XMLTV 节目单。已核对 [j4Uq/TVBoxOSC 的 `20260914-1520` 版本](https://github.com/j4Uq/TVBoxOSC/releases/tag/20260914-1520)（基于 q215613905/TVBoxOS 分支）支持此方式；其他 TVBox 版本需确认其 EPG 协议。更新后刷新 TVBox 配置。
+
 MacCMS type=1 API：
 
 ```text
