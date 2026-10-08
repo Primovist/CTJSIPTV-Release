@@ -423,6 +423,9 @@ TVBox 配置中的直播入口 `/tvbox/live` 使用当前所选模式。单播�
 ```text
 GET /api/health
 GET /api/status
+GET /api/update
+POST /api/update/check
+POST /api/update/install
 GET /api/diagnostics
 POST /api/diagnostics/reauthenticate
 POST /api/diagnostics/restart
@@ -521,12 +524,32 @@ PUBLIC_URL=https://iptv.example.com
 
 ## 12. 更新
 
-停止旧进程后替换 `ctjsiptv` 二进制并重新启动即可。保留：
+程序启动时及之后每 24 小时检查 `Primovist/CTJSIPTV-Release` 的最新正式版本。网页的程序更新卡片展示检查结果，提供“检查更新”和“更新并重启”。默认只检查，安装由用户主动触发。
+
+更新按当前程序的平台与架构选择发布资产，固定到同一 Release 下载二进制和 `SHA256SUMS-macos.txt` 或 `SHA256SUMS-linux.txt`，校验大小和 SHA256，并在安装前检查新程序的版本。只接受更高的稳定版本，草稿、预发布及缺少校验清单的发布不会安装。SHA256 校验用于确认下载完整性，信任来源仍为该 GitHub 发布仓库。
+
+安装文件必须名为 **`ctjsiptv`**，运行账号必须有安装目录的写权限。下载文件经过验证后原子替换当前 `ctjsiptv`，不会保留平台或架构后缀；更新通过原地重启保留启动参数、环境变量、工作目录与 launchd/systemd 监管关系。程序不会自动执行 `sudo`，权限不足时请由管理员手动更新。使用只读目录、容器挂载或容器镜像的部署，应通过原有部署流程更新。
+
+更新前保留同目录的 `ctjsiptv.backup-*` 旧程序。下载、校验或预检失败不会替换当前程序；原地重启的 `exec` 调用失败时尝试恢复备份。新进程已经启动但随后失败时，需要管理员停止服务，将备份恢复为 `ctjsiptv`，再通过原来的启动方式启动。确认新版本的 `/api/health`、`/api/status` 与播放正常后，可删除对应备份。此更新功能不提供启动后的自动健康回滚。
+
+管理 API：`GET /api/update` 查看状态，`POST /api/update/check` 手动检查，`POST /api/update/install` 安装并重启。以上接口均沿用管理访问网段限制；安装请求还必须携带 `X-CTJSIPTV-Update: install` 请求头。命令行调用示例：
+
+```sh
+curl http://127.0.0.1:8765/api/update
+curl -X POST http://127.0.0.1:8765/api/update/check
+curl -X POST http://127.0.0.1:8765/api/update/install \
+  -H 'X-CTJSIPTV-Update: install' -H 'Content-Type: application/json' --data '{}'
+./ctjsiptv --version
+```
+
+也可停止旧进程后手动替换 `ctjsiptv` 二进制并重新启动。保留：
 
 ```text
 ctjsiptv.conf
 live-overrides.json
 vod-title-clean.json
+vod-type-overrides.json
+DATA_DIR 中的 SQLite 数据库、启动身份和缓存
 频道 Logo 目录
 ```
 
