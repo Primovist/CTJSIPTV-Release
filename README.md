@@ -402,7 +402,11 @@ TVBox 推荐直接使用：
 http://设备IP:8765/tvbox.json
 ```
 
-配置中的 `lives[].epg` 提供 `/api/epg/{name}?date={date}` 模板，由客户端替换频道名和日期后获取现有 XMLTV 节目单。已核对 [j4Uq/TVBoxOSC 的 `20260914-1520` 版本](https://github.com/j4Uq/TVBoxOSC/releases/tag/20260914-1520)（基于 q215613905/TVBoxOS 分支）支持此方式；其他 TVBox 版本需确认其 EPG 协议。更新后刷新 TVBox 配置。
+配置中的 `lives[].epg` 提供 `/tvbox/epg?ch={name}&date={date}` 模板，返回 `channel_name`、`date` 和 `epg_data`；每条节目包含 `title`、`start`、`end`，时间使用江苏时区的 `HH:mm`。已核对 [j4Uq/TVBoxOSC 的 `20260227-1116` 版本](https://github.com/j4Uq/TVBoxOSC/releases/tag/20260227-1116)（takagen99/Box）只解析该 JSON 结构，[`20260914-1520` 版本](https://github.com/j4Uq/TVBoxOSC/releases/tag/20260914-1520)（q215613905/TVBoxOS）同时支持 JSON 与 XMLTV；上述为源码协议核对，仍需在实际设备验证。其他分支需分别确认。`ch` 支持客户端的表单编码，区分空格与 `CCTV5+` 的加号；无日期时只输出今日，支持明日及过去 6 天。跨日节目按查询日裁剪，日末用 `24:00` 表示次日零点；原 XMLTV 保留完整跨日时间。该接口随 `TVBOX_ENABLED` 开关启停。更新后刷新 TVBox 配置；takagen99 分支已保存的 EPG 地址优先，需要在客户端设置中更新地址并重新进入直播或重启。
+
+XMLTV 与 TVBox JSON 的已生成响应分别保存在 `DATA_DIR/epg-output-xml.sqlite3` 和 `DATA_DIR/epg-output-json.sqlite3` 两份可再生成的索引缓存中（权限 `0600`），不在进程中长期保存整份 XML/JSON。沿用现有凌晨零时刷新：上游 EPG 缓存更新后，逐项预生成完整原生 XMLTV、每个已启用频道的单日期 XMLTV 和 JSON，整批完成后原子替换当天文件；失败保留已发布文件并重试。Xtream XMLTV 同样使用 XML 输出缓存，其他日期窗口、客户端地址变体及临时查询首次按需生成并落盘。关系变更使两份输出缓存失效；进程重启会重新生成，避免复用上次进程的频道版本。生成时的暂存文件及 SQLite 事务文件会被清理，稳定运行时仅保留上述两份响应缓存主文件；原 `epg-cache.sqlite3` 继续存储上游节目数据。
+
+缓存命中时只读取请求对应的响应，不解析整份 XML/JSON。两个 SQLite 连接各设置 128 KiB 页缓存并关闭 mmap；生成和发送响应仍需要短暂内存，不能完全零占用。每种格式的普通变体按 64 MiB 的响应内容预算淘汰，当前维护核心输出保留；这不是 SQLite 文件物理大小或进程 RSS 的上限。最早支持日期的前一天不在上游查询窗口内，该日期的午夜跨日补齐受此限制。`/api/epg`、`/api/epg/{name}` 和 `/xmltv.php` 仍输出 XMLTV。
 
 MacCMS type=1 API：
 
